@@ -1,0 +1,38 @@
+# Project TODO
+
+- [x] Upload and use the supplied VVLF logo as a durable web asset.
+- [x] Build the public VVLF multi-step application experience with embedded branding and dynamic track questions.
+- [x] Add configurable post-submission thank-you and optional redirect behavior.
+- [x] Add secure public submission storage and validation for applicant responses.
+- [x] Add a submission success and failure experience that does not lose entered answers.
+- [x] Write Vitest coverage for submission validation and post-submission configuration.
+- [x] Test the interactive form, including logo rendering, track branch, submission, thank-you state, and redirect behavior.
+- [x] Enable a valid post-submission redirect URL and verify the live redirect path without breaking the default thank-you flow.
+- [x] Save a release checkpoint and provide publishing instructions.
+- [x] Add an administrator-only applications panel with access control.
+- [x] Add application sorting, searching, and CSV export for administrators.
+- [x] Add a precise remaining-question indicator to the multi-step applicant form.
+- [x] Strengthen and document the mandatory privacy-notice consent checkbox.
+- [x] Redirect successful submissions to https://vishnuventurelabs.com/.
+- [x] Test the updated applicant redirect and administrator management flows.
+- [x] Save an updated release checkpoint and provide publishing guidance.
+- [x] Create the missing users database table so secure administrator sign-in can complete.
+- [x] Re-test owner sign-in and the protected administrator application workflow.
+- [x] Replace the form’s visual assets with the supplied student workspace image and circular VVLF logo.
+- [x] Restore the original primary VVLF logo treatment and place the supplied circular logo in the student-image caption.
+- [x] Link the student-image caption and circular VVLF logo to the official website with engaging student copy and a subtle hover cue.
+- [x] Add an About VVLF modal and record caption-link engagement before redirecting to the official website.
+- [x] Verify the configured analytics provider loads at runtime for caption engagement events.
+- [x] Verify the caption-to-modal interaction and deliberate official-site visit flow in the browser.
+- [x] Define the separate Form Studio product boundary without changing the existing VVLF product.
+- [x] Add tenant-owned form, question, response, and publishing data structures.
+- [x] Build the signed-in owner workspace for creating and managing only the owner’s forms.
+- [x] Build a reusable public form renderer, response collection, and owner-only response views.
+- [x] Validate multi-owner access isolation and the end-to-end builder workflow.
+- [x] Browser-test the signed-in owner workflow from form creation through published response review.
+- [x] Add automated evidence that a second owner cannot access or modify another owner’s Form Studio data.
+- [x] Complete the signed-in owner Form Studio workflow verification and remove all non-personal test data.
+- [ ] Package the dedicated VVLF Form application independently from the reusable VVLF Studio Form application.
+- [ ] Create private GitHub repositories named VVLF Form and VVLF Studio Form.
+- [ ] Configure Vercel projects and obtain confirmation before deploying the two applications.
+- [x] Fix the nested Form Studio editor route so newly saved owner forms open correctly.
