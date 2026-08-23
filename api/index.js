@@ -29,72 +29,71 @@ import { parse as parseCookieHeader2 } from "cookie";
 
 // server/db.ts
 import { and, asc, desc, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 
 // drizzle/schema.ts
-import { boolean, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
-var users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
-  id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
+import { boolean, integer, pgEnum, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+var userRole = pgEnum("user_role", ["user", "admin"]);
+var studioFormStatus = pgEnum("studio_form_status", ["draft", "published"]);
+var studioQuestionKind = pgEnum("studio_question_kind", ["short_text", "long_text", "email", "phone", "single_choice", "multiple_choice", "consent"]);
+var users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  openId: varchar("open_id", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull()
+  loginMethod: varchar("login_method", { length: 64 }),
+  role: userRole("role").default("user").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  lastSignedIn: timestamp("last_signed_in", { withTimezone: true }).defaultNow().notNull()
 });
-var applications = mysqlTable("applications", {
-  id: int("id").autoincrement().primaryKey(),
-  fullName: varchar("fullName", { length: 150 }).notNull(),
+var applications = pgTable("applications", {
+  id: serial("id").primaryKey(),
+  fullName: varchar("full_name", { length: 150 }).notNull(),
   college: varchar("college", { length: 200 }).notNull(),
   department: varchar("department", { length: 160 }).notNull(),
-  studyYear: varchar("studyYear", { length: 40 }).notNull(),
+  studyYear: varchar("study_year", { length: 40 }).notNull(),
   whatsapp: varchar("whatsapp", { length: 32 }).notNull(),
   email: varchar("email", { length: 320 }).notNull(),
   track: varchar("track", { length: 80 }).notNull(),
   tools: text("tools").notNull(),
   focus: text("focus").notNull(),
-  portfolioLink: varchar("portfolioLink", { length: 1e3 }),
+  portfolioLink: varchar("portfolio_link", { length: 1e3 }),
   goal: varchar("goal", { length: 180 }).notNull(),
   workstation: varchar("workstation", { length: 180 }).notNull(),
   consent: boolean("consent").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 });
-var studioForms = mysqlTable("studioForms", {
-  id: int("id").autoincrement().primaryKey(),
-  ownerId: int("ownerId").notNull(),
+var studioForms = pgTable("studio_forms", {
+  id: serial("id").primaryKey(),
+  ownerId: integer("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   title: varchar("title", { length: 180 }).notNull(),
   slug: varchar("slug", { length: 140 }).notNull().unique(),
   description: text("description"),
-  status: mysqlEnum("status", ["draft", "published"]).default("draft").notNull(),
-  successMessage: text("successMessage").notNull(),
-  redirectUrl: varchar("redirectUrl", { length: 1e3 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+  status: studioFormStatus("status").default("draft").notNull(),
+  successMessage: text("success_message").notNull(),
+  redirectUrl: varchar("redirect_url", { length: 1e3 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
 });
-var studioQuestions = mysqlTable("studioQuestions", {
-  id: int("id").autoincrement().primaryKey(),
-  formId: int("formId").notNull(),
-  kind: mysqlEnum("kind", ["short_text", "long_text", "email", "phone", "single_choice", "multiple_choice", "consent"]).notNull(),
+var studioQuestions = pgTable("studio_questions", {
+  id: serial("id").primaryKey(),
+  formId: integer("form_id").notNull().references(() => studioForms.id, { onDelete: "cascade" }),
+  kind: studioQuestionKind("kind").notNull(),
   label: varchar("label", { length: 300 }).notNull(),
-  helpText: text("helpText"),
+  helpText: text("help_text"),
   options: text("options"),
   required: boolean("required").default(false).notNull(),
-  position: int("position").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+  position: integer("position").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
 });
-var studioResponses = mysqlTable("studioResponses", {
-  id: int("id").autoincrement().primaryKey(),
-  formId: int("formId").notNull(),
+var studioResponses = pgTable("studio_responses", {
+  id: serial("id").primaryKey(),
+  formId: integer("form_id").notNull().references(() => studioForms.id, { onDelete: "cascade" }),
   answers: text("answers").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 });
 
 // server/db.ts
@@ -113,74 +112,51 @@ var ENV = {
 };
 
 // server/db.ts
+var _client = null;
 var _db = null;
 async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _client = postgres(process.env.DATABASE_URL, { prepare: false, max: 1 });
+      _db = drizzle(_client);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
+      _client = null;
       _db = null;
     }
   }
   return _db;
 }
 async function upsertUser(user) {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
+  if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
-  try {
-    const values = {
-      openId: user.openId
-    };
-    const updateSet = {};
-    const textFields = ["name", "email", "loginMethod"];
-    const assignNullable = (field) => {
-      const value = user[field];
-      if (value === void 0) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-    textFields.forEach(assignNullable);
-    if (user.lastSignedIn !== void 0) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
+  if (!db) throw new Error("User storage is unavailable.");
+  const ownerRole = user.openId === ENV.ownerOpenId ? "admin" : void 0;
+  const values = {
+    openId: user.openId,
+    name: user.name ?? null,
+    email: user.email ?? null,
+    loginMethod: user.loginMethod ?? null,
+    role: user.role ?? ownerRole ?? "user",
+    lastSignedIn: user.lastSignedIn ?? /* @__PURE__ */ new Date()
+  };
+  await db.insert(users).values(values).onConflictDoUpdate({
+    target: users.openId,
+    set: {
+      name: values.name,
+      email: values.email,
+      loginMethod: values.loginMethod,
+      role: values.role,
+      lastSignedIn: values.lastSignedIn,
+      updatedAt: /* @__PURE__ */ new Date()
     }
-    if (user.role !== void 0) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = "admin";
-      updateSet.role = "admin";
-    }
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = /* @__PURE__ */ new Date();
-    }
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = /* @__PURE__ */ new Date();
-    }
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet
-    });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
-  }
+  });
 }
 async function getUserByOpenId(openId) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return void 0;
-  }
+  if (!db) return void 0;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-  return result.length > 0 ? result[0] : void 0;
+  return result[0];
 }
 async function createApplication(application) {
   const db = await getDb();
@@ -232,10 +208,10 @@ async function createOwnedStudioForm(ownerId, input) {
     successMessage: input.successMessage,
     redirectUrl: input.redirectUrl || null
   };
-  const inserted = await db.insert(studioForms).values(value);
-  const formId = inserted[0].insertId;
-  await db.insert(studioQuestions).values(questionValues(formId, input.questions));
-  return formId;
+  const [created] = await db.insert(studioForms).values(value).returning({ id: studioForms.id });
+  if (!created) throw new Error("Form Studio form could not be created.");
+  await db.insert(studioQuestions).values(questionValues(created.id, input.questions));
+  return created.id;
 }
 async function updateOwnedStudioForm(ownerId, formId, input) {
   const db = await getDb();
@@ -246,7 +222,8 @@ async function updateOwnedStudioForm(ownerId, formId, input) {
     title: input.title,
     description: input.description || null,
     successMessage: input.successMessage,
-    redirectUrl: input.redirectUrl || null
+    redirectUrl: input.redirectUrl || null,
+    updatedAt: /* @__PURE__ */ new Date()
   }).where(and(eq(studioForms.id, formId), eq(studioForms.ownerId, ownerId)));
   await db.delete(studioQuestions).where(eq(studioQuestions.formId, formId));
   await db.insert(studioQuestions).values(questionValues(formId, input.questions));
@@ -255,8 +232,8 @@ async function updateOwnedStudioForm(ownerId, formId, input) {
 async function setStudioFormStatus(ownerId, formId, status) {
   const db = await getDb();
   if (!db) throw new Error("Form Studio storage is unavailable.");
-  const result = await db.update(studioForms).set({ status }).where(and(eq(studioForms.id, formId), eq(studioForms.ownerId, ownerId)));
-  return result[0].affectedRows > 0;
+  const updated = await db.update(studioForms).set({ status, updatedAt: /* @__PURE__ */ new Date() }).where(and(eq(studioForms.id, formId), eq(studioForms.ownerId, ownerId))).returning({ id: studioForms.id });
+  return updated.length > 0;
 }
 async function getPublishedStudioForm(slug) {
   const db = await getDb();
@@ -276,8 +253,7 @@ async function listOwnedStudioResponses(ownerId, formId) {
   if (!db) throw new Error("Form Studio storage is unavailable.");
   const owned = await getOwnedStudioForm(ownerId, formId);
   if (!owned) return void 0;
-  const responses = await db.select().from(studioResponses).where(eq(studioResponses.formId, formId)).orderBy(desc(studioResponses.createdAt));
-  return responses;
+  return db.select().from(studioResponses).where(eq(studioResponses.formId, formId)).orderBy(desc(studioResponses.createdAt));
 }
 
 // server/_core/cookies.ts

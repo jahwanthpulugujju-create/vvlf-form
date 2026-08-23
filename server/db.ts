@@ -1,19 +1,33 @@
 import { and, asc, desc, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { applications, InsertApplication, InsertStudioForm, InsertStudioQuestion, InsertStudioResponse, InsertUser, studioForms, studioQuestions, studioResponses, users } from "../drizzle/schema";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import {
+  applications,
+  InsertApplication,
+  InsertStudioForm,
+  InsertStudioQuestion,
+  InsertStudioResponse,
+  InsertUser,
+  studioForms,
+  studioQuestions,
+  studioResponses,
+  users,
+} from "../drizzle/schema";
 import type { StudioFormInput } from "./formStudio";
 import { nanoid } from "nanoid";
-import { ENV } from './_core/env';
+import { ENV } from "./_core/env";
 
+let _client: ReturnType<typeof postgres> | null = null;
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _client = postgres(process.env.DATABASE_URL, { prepare: false, max: 1 });
+      _db = drizzle(_client);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
+      _client = null;
       _db = null;
     }
   }
@@ -21,74 +35,38 @@ export async function getDb() {
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-
+  if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
+  if (!db) throw new Error("User storage is unavailable.");
 
-  try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
+  const ownerRole = user.openId === ENV.ownerOpenId ? "admin" : undefined;
+  const values: InsertUser = {
+    openId: user.openId,
+    name: user.name ?? null,
+    email: user.email ?? null,
+    loginMethod: user.loginMethod ?? null,
+    role: user.role ?? ownerRole ?? "user",
+    lastSignedIn: user.lastSignedIn ?? new Date(),
+  };
 
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
-  }
+  await db.insert(users).values(values).onConflictDoUpdate({
+    target: users.openId,
+    set: {
+      name: values.name,
+      email: values.email,
+      loginMethod: values.loginMethod,
+      role: values.role,
+      lastSignedIn: values.lastSignedIn,
+      updatedAt: new Date(),
+    },
+  });
 }
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
+  if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  return result[0];
 }
 
 export async function createApplication(application: InsertApplication): Promise<void> {
@@ -147,10 +125,10 @@ export async function createOwnedStudioForm(ownerId: number, input: StudioFormIn
     successMessage: input.successMessage,
     redirectUrl: input.redirectUrl || null,
   };
-  const inserted = await db.insert(studioForms).values(value);
-  const formId = inserted[0].insertId;
-  await db.insert(studioQuestions).values(questionValues(formId, input.questions));
-  return formId;
+  const [created] = await db.insert(studioForms).values(value).returning({ id: studioForms.id });
+  if (!created) throw new Error("Form Studio form could not be created.");
+  await db.insert(studioQuestions).values(questionValues(created.id, input.questions));
+  return created.id;
 }
 
 export async function updateOwnedStudioForm(ownerId: number, formId: number, input: StudioFormInput) {
@@ -163,6 +141,7 @@ export async function updateOwnedStudioForm(ownerId: number, formId: number, inp
     description: input.description || null,
     successMessage: input.successMessage,
     redirectUrl: input.redirectUrl || null,
+    updatedAt: new Date(),
   }).where(and(eq(studioForms.id, formId), eq(studioForms.ownerId, ownerId)));
   await db.delete(studioQuestions).where(eq(studioQuestions.formId, formId));
   await db.insert(studioQuestions).values(questionValues(formId, input.questions));
@@ -172,8 +151,9 @@ export async function updateOwnedStudioForm(ownerId: number, formId: number, inp
 export async function setStudioFormStatus(ownerId: number, formId: number, status: "draft" | "published") {
   const db = await getDb();
   if (!db) throw new Error("Form Studio storage is unavailable.");
-  const result = await db.update(studioForms).set({ status }).where(and(eq(studioForms.id, formId), eq(studioForms.ownerId, ownerId)));
-  return result[0].affectedRows > 0;
+  const updated = await db.update(studioForms).set({ status, updatedAt: new Date() })
+    .where(and(eq(studioForms.id, formId), eq(studioForms.ownerId, ownerId))).returning({ id: studioForms.id });
+  return updated.length > 0;
 }
 
 export async function getPublishedStudioForm(slug: string) {
@@ -196,6 +176,5 @@ export async function listOwnedStudioResponses(ownerId: number, formId: number) 
   if (!db) throw new Error("Form Studio storage is unavailable.");
   const owned = await getOwnedStudioForm(ownerId, formId);
   if (!owned) return undefined;
-  const responses = await db.select().from(studioResponses).where(eq(studioResponses.formId, formId)).orderBy(desc(studioResponses.createdAt));
-  return responses;
+  return db.select().from(studioResponses).where(eq(studioResponses.formId, formId)).orderBy(desc(studioResponses.createdAt));
 }
