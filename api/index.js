@@ -1,40 +1,6 @@
-"use strict";
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc2) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc2 = __getOwnPropDesc(from, key)) || desc2.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
 // api/handler.ts
-var handler_exports = {};
-__export(handler_exports, {
-  default: () => handler_default
-});
-module.exports = __toCommonJS(handler_exports);
-var import_express = __toESM(require("express"), 1);
-var import_express2 = require("@trpc/server/adapters/express");
+import express from "express";
+import { createExpressMiddleware } from "@trpc/server/adapters/express";
 
 // shared/const.ts
 var COOKIE_NAME = "app_session_id";
@@ -59,80 +25,80 @@ var decodeOAuthState = (state) => {
 };
 
 // server/_core/oauth.ts
-var import_cookie2 = require("cookie");
+import { parse as parseCookieHeader2 } from "cookie";
 
 // server/db.ts
-var import_drizzle_orm = require("drizzle-orm");
-var import_mysql2 = require("drizzle-orm/mysql2");
+import { and, asc, desc, eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/mysql2";
 
 // drizzle/schema.ts
-var import_mysql_core = require("drizzle-orm/mysql-core");
-var users = (0, import_mysql_core.mysqlTable)("users", {
+import { boolean, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+var users = mysqlTable("users", {
   /**
    * Surrogate primary key. Auto-incremented numeric value managed by the database.
    * Use this for relations between tables.
    */
-  id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+  id: int("id").autoincrement().primaryKey(),
   /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: (0, import_mysql_core.varchar)("openId", { length: 64 }).notNull().unique(),
-  name: (0, import_mysql_core.text)("name"),
-  email: (0, import_mysql_core.varchar)("email", { length: 320 }),
-  loginMethod: (0, import_mysql_core.varchar)("loginMethod", { length: 64 }),
-  role: (0, import_mysql_core.mysqlEnum)("role", ["user", "admin"]).default("user").notNull(),
-  createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
-  updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: (0, import_mysql_core.timestamp)("lastSignedIn").defaultNow().notNull()
+  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  name: text("name"),
+  email: varchar("email", { length: 320 }),
+  loginMethod: varchar("loginMethod", { length: 64 }),
+  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull()
 });
-var applications = (0, import_mysql_core.mysqlTable)("applications", {
-  id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
-  fullName: (0, import_mysql_core.varchar)("fullName", { length: 150 }).notNull(),
-  college: (0, import_mysql_core.varchar)("college", { length: 200 }).notNull(),
-  department: (0, import_mysql_core.varchar)("department", { length: 160 }).notNull(),
-  studyYear: (0, import_mysql_core.varchar)("studyYear", { length: 40 }).notNull(),
-  whatsapp: (0, import_mysql_core.varchar)("whatsapp", { length: 32 }).notNull(),
-  email: (0, import_mysql_core.varchar)("email", { length: 320 }).notNull(),
-  track: (0, import_mysql_core.varchar)("track", { length: 80 }).notNull(),
-  tools: (0, import_mysql_core.text)("tools").notNull(),
-  focus: (0, import_mysql_core.text)("focus").notNull(),
-  portfolioLink: (0, import_mysql_core.varchar)("portfolioLink", { length: 1e3 }),
-  goal: (0, import_mysql_core.varchar)("goal", { length: 180 }).notNull(),
-  workstation: (0, import_mysql_core.varchar)("workstation", { length: 180 }).notNull(),
-  consent: (0, import_mysql_core.boolean)("consent").notNull(),
-  createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
+var applications = mysqlTable("applications", {
+  id: int("id").autoincrement().primaryKey(),
+  fullName: varchar("fullName", { length: 150 }).notNull(),
+  college: varchar("college", { length: 200 }).notNull(),
+  department: varchar("department", { length: 160 }).notNull(),
+  studyYear: varchar("studyYear", { length: 40 }).notNull(),
+  whatsapp: varchar("whatsapp", { length: 32 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  track: varchar("track", { length: 80 }).notNull(),
+  tools: text("tools").notNull(),
+  focus: text("focus").notNull(),
+  portfolioLink: varchar("portfolioLink", { length: 1e3 }),
+  goal: varchar("goal", { length: 180 }).notNull(),
+  workstation: varchar("workstation", { length: 180 }).notNull(),
+  consent: boolean("consent").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull()
 });
-var studioForms = (0, import_mysql_core.mysqlTable)("studioForms", {
-  id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
-  ownerId: (0, import_mysql_core.int)("ownerId").notNull(),
-  title: (0, import_mysql_core.varchar)("title", { length: 180 }).notNull(),
-  slug: (0, import_mysql_core.varchar)("slug", { length: 140 }).notNull().unique(),
-  description: (0, import_mysql_core.text)("description"),
-  status: (0, import_mysql_core.mysqlEnum)("status", ["draft", "published"]).default("draft").notNull(),
-  successMessage: (0, import_mysql_core.text)("successMessage").notNull(),
-  redirectUrl: (0, import_mysql_core.varchar)("redirectUrl", { length: 1e3 }),
-  createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
-  updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull()
+var studioForms = mysqlTable("studioForms", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerId: int("ownerId").notNull(),
+  title: varchar("title", { length: 180 }).notNull(),
+  slug: varchar("slug", { length: 140 }).notNull().unique(),
+  description: text("description"),
+  status: mysqlEnum("status", ["draft", "published"]).default("draft").notNull(),
+  successMessage: text("successMessage").notNull(),
+  redirectUrl: varchar("redirectUrl", { length: 1e3 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
 });
-var studioQuestions = (0, import_mysql_core.mysqlTable)("studioQuestions", {
-  id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
-  formId: (0, import_mysql_core.int)("formId").notNull(),
-  kind: (0, import_mysql_core.mysqlEnum)("kind", ["short_text", "long_text", "email", "phone", "single_choice", "multiple_choice", "consent"]).notNull(),
-  label: (0, import_mysql_core.varchar)("label", { length: 300 }).notNull(),
-  helpText: (0, import_mysql_core.text)("helpText"),
-  options: (0, import_mysql_core.text)("options"),
-  required: (0, import_mysql_core.boolean)("required").default(false).notNull(),
-  position: (0, import_mysql_core.int)("position").notNull(),
-  createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
-  updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull()
+var studioQuestions = mysqlTable("studioQuestions", {
+  id: int("id").autoincrement().primaryKey(),
+  formId: int("formId").notNull(),
+  kind: mysqlEnum("kind", ["short_text", "long_text", "email", "phone", "single_choice", "multiple_choice", "consent"]).notNull(),
+  label: varchar("label", { length: 300 }).notNull(),
+  helpText: text("helpText"),
+  options: text("options"),
+  required: boolean("required").default(false).notNull(),
+  position: int("position").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
 });
-var studioResponses = (0, import_mysql_core.mysqlTable)("studioResponses", {
-  id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
-  formId: (0, import_mysql_core.int)("formId").notNull(),
-  answers: (0, import_mysql_core.text)("answers").notNull(),
-  createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
+var studioResponses = mysqlTable("studioResponses", {
+  id: int("id").autoincrement().primaryKey(),
+  formId: int("formId").notNull(),
+  answers: text("answers").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull()
 });
 
 // server/db.ts
-var import_nanoid = require("nanoid");
+import { nanoid } from "nanoid";
 
 // server/_core/env.ts
 var ENV = {
@@ -151,7 +117,7 @@ var _db = null;
 async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = (0, import_mysql2.drizzle)(process.env.DATABASE_URL);
+      _db = drizzle(process.env.DATABASE_URL);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -213,7 +179,7 @@ async function getUserByOpenId(openId) {
     console.warn("[Database] Cannot get user: database not available");
     return void 0;
   }
-  const result = await db.select().from(users).where((0, import_drizzle_orm.eq)(users.openId, openId)).limit(1);
+  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function createApplication(application) {
@@ -224,11 +190,11 @@ async function createApplication(application) {
 async function listApplications() {
   const db = await getDb();
   if (!db) throw new Error("Application storage is unavailable.");
-  return db.select().from(applications).orderBy((0, import_drizzle_orm.desc)(applications.createdAt));
+  return db.select().from(applications).orderBy(desc(applications.createdAt));
 }
 function makeStudioSlug(title) {
   const base = title.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 80) || "form";
-  return `${base}-${(0, import_nanoid.nanoid)(7).toLowerCase()}`;
+  return `${base}-${nanoid(7).toLowerCase()}`;
 }
 function questionValues(formId, questions) {
   return questions.map((question, index) => ({
@@ -244,14 +210,14 @@ function questionValues(formId, questions) {
 async function listOwnedStudioForms(ownerId) {
   const db = await getDb();
   if (!db) throw new Error("Form Studio storage is unavailable.");
-  return db.select().from(studioForms).where((0, import_drizzle_orm.eq)(studioForms.ownerId, ownerId)).orderBy((0, import_drizzle_orm.desc)(studioForms.updatedAt));
+  return db.select().from(studioForms).where(eq(studioForms.ownerId, ownerId)).orderBy(desc(studioForms.updatedAt));
 }
 async function getOwnedStudioForm(ownerId, formId) {
   const db = await getDb();
   if (!db) throw new Error("Form Studio storage is unavailable.");
-  const forms = await db.select().from(studioForms).where((0, import_drizzle_orm.and)((0, import_drizzle_orm.eq)(studioForms.id, formId), (0, import_drizzle_orm.eq)(studioForms.ownerId, ownerId))).limit(1);
+  const forms = await db.select().from(studioForms).where(and(eq(studioForms.id, formId), eq(studioForms.ownerId, ownerId))).limit(1);
   if (!forms[0]) return void 0;
-  const questions = await db.select().from(studioQuestions).where((0, import_drizzle_orm.eq)(studioQuestions.formId, formId)).orderBy((0, import_drizzle_orm.asc)(studioQuestions.position));
+  const questions = await db.select().from(studioQuestions).where(eq(studioQuestions.formId, formId)).orderBy(asc(studioQuestions.position));
   return { form: forms[0], questions };
 }
 async function createOwnedStudioForm(ownerId, input) {
@@ -281,23 +247,23 @@ async function updateOwnedStudioForm(ownerId, formId, input) {
     description: input.description || null,
     successMessage: input.successMessage,
     redirectUrl: input.redirectUrl || null
-  }).where((0, import_drizzle_orm.and)((0, import_drizzle_orm.eq)(studioForms.id, formId), (0, import_drizzle_orm.eq)(studioForms.ownerId, ownerId)));
-  await db.delete(studioQuestions).where((0, import_drizzle_orm.eq)(studioQuestions.formId, formId));
+  }).where(and(eq(studioForms.id, formId), eq(studioForms.ownerId, ownerId)));
+  await db.delete(studioQuestions).where(eq(studioQuestions.formId, formId));
   await db.insert(studioQuestions).values(questionValues(formId, input.questions));
   return true;
 }
 async function setStudioFormStatus(ownerId, formId, status) {
   const db = await getDb();
   if (!db) throw new Error("Form Studio storage is unavailable.");
-  const result = await db.update(studioForms).set({ status }).where((0, import_drizzle_orm.and)((0, import_drizzle_orm.eq)(studioForms.id, formId), (0, import_drizzle_orm.eq)(studioForms.ownerId, ownerId)));
+  const result = await db.update(studioForms).set({ status }).where(and(eq(studioForms.id, formId), eq(studioForms.ownerId, ownerId)));
   return result[0].affectedRows > 0;
 }
 async function getPublishedStudioForm(slug) {
   const db = await getDb();
   if (!db) throw new Error("Form Studio storage is unavailable.");
-  const forms = await db.select().from(studioForms).where((0, import_drizzle_orm.and)((0, import_drizzle_orm.eq)(studioForms.slug, slug), (0, import_drizzle_orm.eq)(studioForms.status, "published"))).limit(1);
+  const forms = await db.select().from(studioForms).where(and(eq(studioForms.slug, slug), eq(studioForms.status, "published"))).limit(1);
   if (!forms[0]) return void 0;
-  const questions = await db.select().from(studioQuestions).where((0, import_drizzle_orm.eq)(studioQuestions.formId, forms[0].id)).orderBy((0, import_drizzle_orm.asc)(studioQuestions.position));
+  const questions = await db.select().from(studioQuestions).where(eq(studioQuestions.formId, forms[0].id)).orderBy(asc(studioQuestions.position));
   return { form: forms[0], questions };
 }
 async function createStudioResponse(response) {
@@ -310,7 +276,7 @@ async function listOwnedStudioResponses(ownerId, formId) {
   if (!db) throw new Error("Form Studio storage is unavailable.");
   const owned = await getOwnedStudioForm(ownerId, formId);
   if (!owned) return void 0;
-  const responses = await db.select().from(studioResponses).where((0, import_drizzle_orm.eq)(studioResponses.formId, formId)).orderBy((0, import_drizzle_orm.desc)(studioResponses.createdAt));
+  const responses = await db.select().from(studioResponses).where(eq(studioResponses.formId, formId)).orderBy(desc(studioResponses.createdAt));
   return responses;
 }
 
@@ -342,9 +308,9 @@ var HttpError = class extends Error {
 var ForbiddenError = (msg) => new HttpError(403, msg);
 
 // server/_core/sdk.ts
-var import_axios = __toESM(require("axios"), 1);
-var import_cookie = require("cookie");
-var import_jose = require("jose");
+import axios from "axios";
+import { parse as parseCookieHeader } from "cookie";
+import { SignJWT, jwtVerify } from "jose";
 var isNonEmptyString = (value) => typeof value === "string" && value.length > 0;
 var EXCHANGE_TOKEN_PATH = `/webdev.v1.WebDevAuthPublicService/ExchangeToken`;
 var GET_USER_INFO_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserInfo`;
@@ -385,7 +351,7 @@ var OAuthService = class {
     return data;
   }
 };
-var createOAuthHttpClient = () => import_axios.default.create({
+var createOAuthHttpClient = () => axios.create({
   baseURL: ENV.oAuthServerUrl,
   timeout: AXIOS_TIMEOUT_MS
 });
@@ -442,7 +408,7 @@ var SDKServer = class {
     if (!cookieHeader) {
       return /* @__PURE__ */ new Map();
     }
-    const parsed = (0, import_cookie.parse)(cookieHeader);
+    const parsed = parseCookieHeader(cookieHeader);
     return new Map(Object.entries(parsed));
   }
   getSessionSecret() {
@@ -469,7 +435,7 @@ var SDKServer = class {
     const expiresInMs = options.expiresInMs ?? ONE_YEAR_MS;
     const expirationSeconds = Math.floor((issuedAt + expiresInMs) / 1e3);
     const secretKey = this.getSessionSecret();
-    return new import_jose.SignJWT({
+    return new SignJWT({
       openId: payload.openId,
       appId: payload.appId,
       name: payload.name
@@ -482,7 +448,7 @@ var SDKServer = class {
     }
     try {
       const secretKey = this.getSessionSecret();
-      const { payload } = await (0, import_jose.jwtVerify)(cookieValue, secretKey, {
+      const { payload } = await jwtVerify(cookieValue, secretKey, {
         algorithms: ["HS256"]
       });
       const { openId, appId, name } = payload;
@@ -602,7 +568,7 @@ function registerOAuthRoutes(app2) {
       return;
     }
     const { nonce } = decodeOAuthState(state);
-    const expectedNonce = (0, import_cookie2.parse)(req.headers.cookie ?? "")[OAUTH_STATE_COOKIE];
+    const expectedNonce = parseCookieHeader2(req.headers.cookie ?? "")[OAUTH_STATE_COOKIE];
     if (!nonce || nonce !== expectedNonce) {
       res.status(403).json({ error: "invalid oauth state" });
       return;
@@ -693,14 +659,14 @@ async function createContext(opts) {
 }
 
 // server/routers.ts
-var import_server3 = require("@trpc/server");
-var import_zod4 = require("zod");
+import { TRPCError as TRPCError3 } from "@trpc/server";
+import { z as z4 } from "zod";
 
 // server/_core/systemRouter.ts
-var import_zod = require("zod");
+import { z } from "zod";
 
 // server/_core/notification.ts
-var import_server = require("@trpc/server");
+import { TRPCError } from "@trpc/server";
 var TITLE_MAX_LENGTH = 1200;
 var CONTENT_MAX_LENGTH = 2e4;
 var trimValue = (value) => value.trim();
@@ -714,13 +680,13 @@ var buildEndpointUrl = (baseUrl) => {
 };
 var validatePayload = (input) => {
   if (!isNonEmptyString2(input.title)) {
-    throw new import_server.TRPCError({
+    throw new TRPCError({
       code: "BAD_REQUEST",
       message: "Notification title is required."
     });
   }
   if (!isNonEmptyString2(input.content)) {
-    throw new import_server.TRPCError({
+    throw new TRPCError({
       code: "BAD_REQUEST",
       message: "Notification content is required."
     });
@@ -728,13 +694,13 @@ var validatePayload = (input) => {
   const title = trimValue(input.title);
   const content = trimValue(input.content);
   if (title.length > TITLE_MAX_LENGTH) {
-    throw new import_server.TRPCError({
+    throw new TRPCError({
       code: "BAD_REQUEST",
       message: `Notification title must be at most ${TITLE_MAX_LENGTH} characters.`
     });
   }
   if (content.length > CONTENT_MAX_LENGTH) {
-    throw new import_server.TRPCError({
+    throw new TRPCError({
       code: "BAD_REQUEST",
       message: `Notification content must be at most ${CONTENT_MAX_LENGTH} characters.`
     });
@@ -744,13 +710,13 @@ var validatePayload = (input) => {
 async function notifyOwner(payload) {
   const { title, content } = validatePayload(payload);
   if (!ENV.forgeApiUrl) {
-    throw new import_server.TRPCError({
+    throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Notification service URL is not configured."
     });
   }
   if (!ENV.forgeApiKey) {
-    throw new import_server.TRPCError({
+    throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Notification service API key is not configured."
     });
@@ -782,17 +748,17 @@ async function notifyOwner(payload) {
 }
 
 // server/_core/trpc.ts
-var import_server2 = require("@trpc/server");
-var import_superjson = __toESM(require("superjson"), 1);
-var t = import_server2.initTRPC.context().create({
-  transformer: import_superjson.default
+import { initTRPC, TRPCError as TRPCError2 } from "@trpc/server";
+import superjson from "superjson";
+var t = initTRPC.context().create({
+  transformer: superjson
 });
 var router = t.router;
 var publicProcedure = t.procedure;
 var requireUser = t.middleware(async (opts) => {
   const { ctx, next } = opts;
   if (!ctx.user) {
-    throw new import_server2.TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+    throw new TRPCError2({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
   }
   return next({
     ctx: {
@@ -806,7 +772,7 @@ var adminProcedure = t.procedure.use(
   t.middleware(async (opts) => {
     const { ctx, next } = opts;
     if (!ctx.user || ctx.user.role !== "admin") {
-      throw new import_server2.TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
+      throw new TRPCError2({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
     }
     return next({
       ctx: {
@@ -820,16 +786,16 @@ var adminProcedure = t.procedure.use(
 // server/_core/systemRouter.ts
 var systemRouter = router({
   health: publicProcedure.input(
-    import_zod.z.object({
-      timestamp: import_zod.z.number().min(0, "timestamp cannot be negative")
+    z.object({
+      timestamp: z.number().min(0, "timestamp cannot be negative")
     })
   ).query(() => ({
     ok: true
   })),
   notifyOwner: adminProcedure.input(
-    import_zod.z.object({
-      title: import_zod.z.string().min(1, "title is required"),
-      content: import_zod.z.string().min(1, "content is required")
+    z.object({
+      title: z.string().min(1, "title is required"),
+      content: z.string().min(1, "content is required")
     })
   ).mutation(async ({ input }) => {
     const delivered = await notifyOwner(input);
@@ -840,7 +806,7 @@ var systemRouter = router({
 });
 
 // server/application.ts
-var import_zod2 = require("zod");
+import { z as z2 } from "zod";
 var trackOptions = [
   "Design & Visuals",
   "Video & Media",
@@ -859,39 +825,39 @@ var workstationOptions = [
   "I have my own personal laptop",
   "I will use campus systems and foundation labs"
 ];
-var applicationInputSchema = import_zod2.z.object({
-  fullName: import_zod2.z.string().trim().min(2, "Please enter your full name.").max(150),
-  college: import_zod2.z.string().trim().min(2, "Please enter your college name.").max(200),
-  department: import_zod2.z.string().trim().min(2, "Please enter your department or branch.").max(160),
-  studyYear: import_zod2.z.enum(studyYearOptions),
-  whatsapp: import_zod2.z.string().trim().min(7, "Please enter a valid WhatsApp number.").max(32),
-  email: import_zod2.z.string().trim().email("Please enter a valid email address.").max(320),
-  track: import_zod2.z.enum(trackOptions),
-  tools: import_zod2.z.array(import_zod2.z.string().trim().min(1).max(100)).min(1, "Choose at least one capability.").max(6),
-  focus: import_zod2.z.string().trim().min(2, "Choose the answer that fits you best.").max(220),
-  portfolioLink: import_zod2.z.union([import_zod2.z.literal(""), import_zod2.z.string().url("Use a complete https:// link.").max(1e3)]),
-  goal: import_zod2.z.enum(goalOptions),
-  workstation: import_zod2.z.enum(workstationOptions),
-  consent: import_zod2.z.literal(true, { error: "Please confirm the consent statement before submitting." })
+var applicationInputSchema = z2.object({
+  fullName: z2.string().trim().min(2, "Please enter your full name.").max(150),
+  college: z2.string().trim().min(2, "Please enter your college name.").max(200),
+  department: z2.string().trim().min(2, "Please enter your department or branch.").max(160),
+  studyYear: z2.enum(studyYearOptions),
+  whatsapp: z2.string().trim().min(7, "Please enter a valid WhatsApp number.").max(32),
+  email: z2.string().trim().email("Please enter a valid email address.").max(320),
+  track: z2.enum(trackOptions),
+  tools: z2.array(z2.string().trim().min(1).max(100)).min(1, "Choose at least one capability.").max(6),
+  focus: z2.string().trim().min(2, "Choose the answer that fits you best.").max(220),
+  portfolioLink: z2.union([z2.literal(""), z2.string().url("Use a complete https:// link.").max(1e3)]),
+  goal: z2.enum(goalOptions),
+  workstation: z2.enum(workstationOptions),
+  consent: z2.literal(true, { error: "Please confirm the consent statement before submitting." })
 });
 
 // server/formStudio.ts
-var import_zod3 = require("zod");
+import { z as z3 } from "zod";
 var studioQuestionKinds = ["short_text", "long_text", "email", "phone", "single_choice", "multiple_choice", "consent"];
-var studioQuestionInputSchema = import_zod3.z.object({
-  kind: import_zod3.z.enum(studioQuestionKinds),
-  label: import_zod3.z.string().trim().min(1, "Every question needs a label.").max(300),
-  helpText: import_zod3.z.string().trim().max(1e3).optional().default(""),
-  options: import_zod3.z.array(import_zod3.z.string().trim().min(1).max(160)).max(25).optional().default([]),
-  required: import_zod3.z.boolean().default(false),
-  position: import_zod3.z.number().int().min(0)
+var studioQuestionInputSchema = z3.object({
+  kind: z3.enum(studioQuestionKinds),
+  label: z3.string().trim().min(1, "Every question needs a label.").max(300),
+  helpText: z3.string().trim().max(1e3).optional().default(""),
+  options: z3.array(z3.string().trim().min(1).max(160)).max(25).optional().default([]),
+  required: z3.boolean().default(false),
+  position: z3.number().int().min(0)
 });
-var studioFormInputSchema = import_zod3.z.object({
-  title: import_zod3.z.string().trim().min(2, "Give your form a title.").max(180),
-  description: import_zod3.z.string().trim().max(3e3).optional().default(""),
-  successMessage: import_zod3.z.string().trim().min(2, "Add a short confirmation message.").max(3e3),
-  redirectUrl: import_zod3.z.string().trim().max(1e3).optional().default(""),
-  questions: import_zod3.z.array(studioQuestionInputSchema).min(1, "Add at least one question.")
+var studioFormInputSchema = z3.object({
+  title: z3.string().trim().min(2, "Give your form a title.").max(180),
+  description: z3.string().trim().max(3e3).optional().default(""),
+  successMessage: z3.string().trim().min(2, "Add a short confirmation message.").max(3e3),
+  redirectUrl: z3.string().trim().max(1e3).optional().default(""),
+  questions: z3.array(studioQuestionInputSchema).min(1, "Add at least one question.")
 });
 var isBlank = (value) => value === void 0 || value === null || value === "" || Array.isArray(value) && value.length === 0;
 function validateStudioResponse(questions, rawAnswers) {
@@ -968,7 +934,7 @@ var appRouter = router({
         return { success: true };
       } catch (error) {
         console.error("[Application] Submission failed", error);
-        throw new import_server3.TRPCError({
+        throw new TRPCError3({
           code: "INTERNAL_SERVER_ERROR",
           message: "We could not save your application. Please try again in a moment."
         });
@@ -979,7 +945,7 @@ var appRouter = router({
         return await listApplications();
       } catch (error) {
         console.error("[Application] Listing failed", error);
-        throw new import_server3.TRPCError({
+        throw new TRPCError3({
           code: "INTERNAL_SERVER_ERROR",
           message: "We could not load applications. Please try again in a moment."
         });
@@ -988,54 +954,57 @@ var appRouter = router({
   }),
   studio: router({
     list: protectedProcedure.query(async ({ ctx }) => listOwnedStudioForms(ctx.user.id)),
-    get: protectedProcedure.input(import_zod4.z.object({ formId: import_zod4.z.number().int().positive() })).query(async ({ ctx, input }) => {
+    get: protectedProcedure.input(z4.object({ formId: z4.number().int().positive() })).query(async ({ ctx, input }) => {
       const result = await getOwnedStudioForm(ctx.user.id, input.formId);
-      if (!result) throw new import_server3.TRPCError({ code: "NOT_FOUND", message: "Form not found." });
+      if (!result) throw new TRPCError3({ code: "NOT_FOUND", message: "Form not found." });
       return { form: result.form, questions: result.questions.map(publicQuestion) };
     }),
     create: protectedProcedure.input(studioFormInputSchema).mutation(async ({ ctx, input }) => {
       const formId = await createOwnedStudioForm(ctx.user.id, input);
       return { formId };
     }),
-    update: protectedProcedure.input(import_zod4.z.object({ formId: import_zod4.z.number().int().positive(), data: studioFormInputSchema })).mutation(async ({ ctx, input }) => {
+    update: protectedProcedure.input(z4.object({ formId: z4.number().int().positive(), data: studioFormInputSchema })).mutation(async ({ ctx, input }) => {
       const updated = await updateOwnedStudioForm(ctx.user.id, input.formId, input.data);
-      if (!updated) throw new import_server3.TRPCError({ code: "NOT_FOUND", message: "Form not found." });
+      if (!updated) throw new TRPCError3({ code: "NOT_FOUND", message: "Form not found." });
       return { success: true };
     }),
-    setStatus: protectedProcedure.input(import_zod4.z.object({ formId: import_zod4.z.number().int().positive(), status: import_zod4.z.enum(["draft", "published"]) })).mutation(async ({ ctx, input }) => {
+    setStatus: protectedProcedure.input(z4.object({ formId: z4.number().int().positive(), status: z4.enum(["draft", "published"]) })).mutation(async ({ ctx, input }) => {
       const updated = await setStudioFormStatus(ctx.user.id, input.formId, input.status);
-      if (!updated) throw new import_server3.TRPCError({ code: "NOT_FOUND", message: "Form not found." });
+      if (!updated) throw new TRPCError3({ code: "NOT_FOUND", message: "Form not found." });
       return { success: true };
     }),
-    responses: protectedProcedure.input(import_zod4.z.object({ formId: import_zod4.z.number().int().positive() })).query(async ({ ctx, input }) => {
+    responses: protectedProcedure.input(z4.object({ formId: z4.number().int().positive() })).query(async ({ ctx, input }) => {
       const responses = await listOwnedStudioResponses(ctx.user.id, input.formId);
-      if (!responses) throw new import_server3.TRPCError({ code: "NOT_FOUND", message: "Form not found." });
+      if (!responses) throw new TRPCError3({ code: "NOT_FOUND", message: "Form not found." });
       return responses;
     }),
-    publicGet: publicProcedure.input(import_zod4.z.object({ slug: import_zod4.z.string().min(1).max(140) })).query(async ({ input }) => {
+    publicGet: publicProcedure.input(z4.object({ slug: z4.string().min(1).max(140) })).query(async ({ input }) => {
       const result = await getPublishedStudioForm(input.slug);
-      if (!result) throw new import_server3.TRPCError({ code: "NOT_FOUND", message: "This form is unavailable." });
+      if (!result) throw new TRPCError3({ code: "NOT_FOUND", message: "This form is unavailable." });
       return { form: result.form, questions: result.questions.map(publicQuestion) };
     }),
-    submit: publicProcedure.input(import_zod4.z.object({ slug: import_zod4.z.string().min(1).max(140), answers: import_zod4.z.record(import_zod4.z.string(), import_zod4.z.unknown()) })).mutation(async ({ input }) => {
+    submit: publicProcedure.input(z4.object({ slug: z4.string().min(1).max(140), answers: z4.record(z4.string(), z4.unknown()) })).mutation(async ({ input }) => {
       const result = await getPublishedStudioForm(input.slug);
-      if (!result) throw new import_server3.TRPCError({ code: "NOT_FOUND", message: "This form is unavailable." });
+      if (!result) throw new TRPCError3({ code: "NOT_FOUND", message: "This form is unavailable." });
       try {
         const answers = validateStudioResponse(result.questions.map(publicQuestion), input.answers);
         await createStudioResponse({ formId: result.form.id, answers: JSON.stringify(answers) });
         return { success: true, redirectUrl: result.form.redirectUrl };
       } catch (error) {
-        throw new import_server3.TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Please review your answers." });
+        throw new TRPCError3({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Please review your answers." });
       }
     })
   })
 });
 
 // api/handler.ts
-var app = (0, import_express.default)();
-app.use(import_express.default.json({ limit: "50mb" }));
-app.use(import_express.default.urlencoded({ limit: "50mb", extended: true }));
+var app = express();
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 registerStorageProxy(app);
 registerOAuthRoutes(app);
-app.use("/api/trpc", (0, import_express2.createExpressMiddleware)({ router: appRouter, createContext }));
+app.use("/api/trpc", createExpressMiddleware({ router: appRouter, createContext }));
 var handler_default = app;
+export {
+  handler_default as default
+};
