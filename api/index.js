@@ -114,6 +114,7 @@ var ENV = {
 // server/db.ts
 import fs from "fs";
 import path from "path";
+import os from "os";
 var _client = null;
 var _db = null;
 async function getDb() {
@@ -160,47 +161,83 @@ async function getUserByOpenId(openId) {
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
 }
-var LOCAL_STORE_PATH = path.resolve(import.meta.dirname, "../data/applications_store.json");
-function ensureLocalStoreDir() {
-  const dir = path.dirname(LOCAL_STORE_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+var inMemoryStore = [];
+function getLocalStorePath() {
+  try {
+    const defaultPath = path.resolve(import.meta.dirname, "../data/applications_store.json");
+    const dir = path.dirname(defaultPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    return defaultPath;
+  } catch {
+    const tmpDir = path.join(os.tmpdir(), "vvlf-data");
+    try {
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      }
+    } catch {
+    }
+    return path.join(tmpDir, "applications_store.json");
   }
 }
 function readLocalApplications() {
   try {
-    ensureLocalStoreDir();
-    if (!fs.existsSync(LOCAL_STORE_PATH)) return [];
-    const content = fs.readFileSync(LOCAL_STORE_PATH, "utf-8");
-    return JSON.parse(content);
-  } catch {
-    return [];
+    const storePath = getLocalStorePath();
+    if (fs.existsSync(storePath)) {
+      const content = fs.readFileSync(storePath, "utf-8");
+      const parsed = JSON.parse(content);
+      return [...inMemoryStore, ...parsed];
+    }
+  } catch (err) {
+    console.warn("[LocalStore] File read error:", err);
   }
+  return inMemoryStore;
 }
 function writeLocalApplication(app2) {
-  ensureLocalStoreDir();
-  const list = readLocalApplications();
   const newEntry = {
     ...app2,
-    id: list.length + 1,
+    id: inMemoryStore.length + 1,
     createdAt: /* @__PURE__ */ new Date()
   };
-  list.unshift(newEntry);
-  fs.writeFileSync(LOCAL_STORE_PATH, JSON.stringify(list, null, 2), "utf-8");
-}
-async function createApplication(application) {
-  const db = await getDb();
-  if (db) {
-    await db.insert(applications).values(application);
-  } else {
-    console.log("[LocalStore] Storing application locally in data/applications_store.json");
-    writeLocalApplication(application);
+  try {
+    const storePath = getLocalStorePath();
+    let list = [];
+    if (fs.existsSync(storePath)) {
+      try {
+        list = JSON.parse(fs.readFileSync(storePath, "utf-8"));
+      } catch {
+      }
+    }
+    newEntry.id = list.length + 1;
+    list.unshift(newEntry);
+    fs.writeFileSync(storePath, JSON.stringify(list, null, 2), "utf-8");
+    console.log(`[LocalStore] Saved application #${newEntry.id} to ${storePath}`);
+  } catch (err) {
+    console.warn("[LocalStore] Read-only filesystem detected, keeping in memory store:", err);
+    inMemoryStore.unshift(newEntry);
   }
 }
+async function createApplication(application) {
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.insert(applications).values(application);
+      return;
+    }
+  } catch (dbError) {
+    console.warn("[Database] Database unavailable, falling back to local/memory store:", dbError);
+  }
+  writeLocalApplication(application);
+}
 async function listApplications() {
-  const db = await getDb();
-  if (db) {
-    return db.select().from(applications).orderBy(desc(applications.createdAt));
+  try {
+    const db = await getDb();
+    if (db) {
+      return await db.select().from(applications).orderBy(desc(applications.createdAt));
+    }
+  } catch (dbError) {
+    console.warn("[Database] Query failed, falling back to local list:", dbError);
   }
   return readLocalApplications();
 }
@@ -915,10 +952,11 @@ function validateStudioResponse(questions, rawAnswers) {
 }
 
 // server/googleSheets.ts
+var DEFAULT_GOOGLE_SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz94rbvo1Lg83JM2gdLBOKoIf9pfhcaNH9fWHp4WD8v_8YmEWix4-hZr9jXZSZY5VJy/exec";
 async function syncToGoogleSheets(data) {
-  const webhookUrl = process.env.GOOGLE_SHEET_WEBHOOK_URL;
+  const webhookUrl = process.env.GOOGLE_SHEET_WEBHOOK_URL || DEFAULT_GOOGLE_SHEET_WEBHOOK_URL;
   if (!webhookUrl || !webhookUrl.startsWith("http")) {
-    return { success: false, error: "GOOGLE_SHEET_WEBHOOK_URL is not configured in .env" };
+    return { success: false, error: "GOOGLE_SHEET_WEBHOOK_URL is not configured" };
   }
   try {
     const payload = {
@@ -998,7 +1036,19 @@ async function syncAllSheets(data) {
 // server/excelExport.ts
 import fs3 from "fs";
 import path3 from "path";
-var CSV_FILE_PATH = path3.resolve(import.meta.dirname, "../data/VVLF_Student_Applications.csv");
+import os2 from "os";
+function getCsvFilePath() {
+  try {
+    const defaultPath = path3.resolve(import.meta.dirname, "../data/VVLF_Student_Applications.csv");
+    const dir = path3.dirname(defaultPath);
+    if (!fs3.existsSync(dir)) {
+      fs3.mkdirSync(dir, { recursive: true });
+    }
+    return defaultPath;
+  } catch {
+    return path3.join(os2.tmpdir(), "VVLF_Student_Applications.csv");
+  }
+}
 function escapeCsvField(value) {
   if (value === null || value === void 0) return '""';
   const str = String(value);
@@ -1059,15 +1109,16 @@ async function generateCsvString() {
 }
 async function updateLocalCsvFile() {
   try {
+    const csvFilePath = getCsvFilePath();
     const csvContent = await generateCsvString();
-    const dir = path3.dirname(CSV_FILE_PATH);
+    const dir = path3.dirname(csvFilePath);
     if (!fs3.existsSync(dir)) {
       fs3.mkdirSync(dir, { recursive: true });
     }
-    fs3.writeFileSync(CSV_FILE_PATH, "\uFEFF" + csvContent, "utf-8");
-    console.log(`[Excel Export] Updated Excel/CSV file at: ${CSV_FILE_PATH}`);
+    fs3.writeFileSync(csvFilePath, "\uFEFF" + csvContent, "utf-8");
+    console.log(`[Excel Export] Updated Excel/CSV file at: ${csvFilePath}`);
   } catch (error) {
-    console.error("[Excel Export] Failed to update local CSV file:", error);
+    console.warn("[Excel Export] Local CSV file update skipped (read-only filesystem):", error);
   }
 }
 function registerExcelExportRoute(app2) {
@@ -1130,21 +1181,25 @@ var appRouter = router({
           workstation: input.workstation,
           consent: input.consent
         });
-        syncAllSheets({
-          fullName: input.fullName,
-          college: input.college,
-          department: input.department,
-          studyYear: input.studyYear,
-          whatsapp: input.whatsapp,
-          email: input.email,
-          track: input.track,
-          tools: input.tools,
-          focus: input.focus,
-          portfolioLink: input.portfolioLink,
-          goal: input.goal,
-          workstation: input.workstation,
-          consent: input.consent
-        }).catch((err) => console.error("[Sheets Sync] Error:", err));
+        try {
+          await syncAllSheets({
+            fullName: input.fullName,
+            college: input.college,
+            department: input.department,
+            studyYear: input.studyYear,
+            whatsapp: input.whatsapp,
+            email: input.email,
+            track: input.track,
+            tools: input.tools,
+            focus: input.focus,
+            portfolioLink: input.portfolioLink,
+            goal: input.goal,
+            workstation: input.workstation,
+            consent: input.consent
+          });
+        } catch (sheetsErr) {
+          console.error("[Sheets Sync] Error:", sheetsErr);
+        }
         updateLocalCsvFile().catch(() => {
         });
         return { success: true };

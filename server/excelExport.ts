@@ -1,9 +1,21 @@
 import type { Express, Request, Response } from "express";
 import fs from "fs";
 import path from "path";
+import os from "os";
 import { listApplications } from "./db";
 
-const CSV_FILE_PATH = path.resolve(import.meta.dirname, "../data/VVLF_Student_Applications.csv");
+function getCsvFilePath(): string {
+  try {
+    const defaultPath = path.resolve(import.meta.dirname, "../data/VVLF_Student_Applications.csv");
+    const dir = path.dirname(defaultPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    return defaultPath;
+  } catch {
+    return path.join(os.tmpdir(), "VVLF_Student_Applications.csv");
+  }
+}
 
 function escapeCsvField(value: unknown): string {
   if (value === null || value === undefined) return '""';
@@ -75,16 +87,17 @@ export async function generateCsvString(): Promise<string> {
 
 export async function updateLocalCsvFile(): Promise<void> {
   try {
+    const csvFilePath = getCsvFilePath();
     const csvContent = await generateCsvString();
-    const dir = path.dirname(CSV_FILE_PATH);
+    const dir = path.dirname(csvFilePath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     // Add UTF-8 BOM so Excel opens special characters and Indian phone numbers cleanly
-    fs.writeFileSync(CSV_FILE_PATH, "\uFEFF" + csvContent, "utf-8");
-    console.log(`[Excel Export] Updated Excel/CSV file at: ${CSV_FILE_PATH}`);
+    fs.writeFileSync(csvFilePath, "\uFEFF" + csvContent, "utf-8");
+    console.log(`[Excel Export] Updated Excel/CSV file at: ${csvFilePath}`);
   } catch (error) {
-    console.error("[Excel Export] Failed to update local CSV file:", error);
+    console.warn("[Excel Export] Local CSV file update skipped (read-only filesystem):", error);
   }
 }
 

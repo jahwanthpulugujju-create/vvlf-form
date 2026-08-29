@@ -52,22 +52,26 @@ export const appRouter = router({
           consent: input.consent,
         });
 
-        // Trigger real-time sync to Google Sheets and Excel Online
-        syncAllSheets({
-          fullName: input.fullName,
-          college: input.college,
-          department: input.department,
-          studyYear: input.studyYear,
-          whatsapp: input.whatsapp,
-          email: input.email,
-          track: input.track,
-          tools: input.tools,
-          focus: input.focus,
-          portfolioLink: input.portfolioLink,
-          goal: input.goal,
-          workstation: input.workstation,
-          consent: input.consent,
-        }).catch((err) => console.error("[Sheets Sync] Error:", err));
+        // Trigger real-time sync to Google Sheets and Excel Online (awaited for serverless resilience)
+        try {
+          await syncAllSheets({
+            fullName: input.fullName,
+            college: input.college,
+            department: input.department,
+            studyYear: input.studyYear,
+            whatsapp: input.whatsapp,
+            email: input.email,
+            track: input.track,
+            tools: input.tools,
+            focus: input.focus,
+            portfolioLink: input.portfolioLink,
+            goal: input.goal,
+            workstation: input.workstation,
+            consent: input.consent,
+          });
+        } catch (sheetsErr) {
+          console.error("[Sheets Sync] Error:", sheetsErr);
+        }
 
         // Update local spreadsheet file
         updateLocalCsvFile().catch(() => {});

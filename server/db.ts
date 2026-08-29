@@ -71,53 +71,90 @@ export async function getUserByOpenId(openId: string) {
 
 import fs from "fs";
 import path from "path";
+import os from "os";
 
-const LOCAL_STORE_PATH = path.resolve(import.meta.dirname, "../data/applications_store.json");
+let inMemoryStore: (InsertApplication & { id: number; createdAt: Date })[] = [];
 
-function ensureLocalStoreDir() {
-  const dir = path.dirname(LOCAL_STORE_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+function getLocalStorePath(): string {
+  try {
+    const defaultPath = path.resolve(import.meta.dirname, "../data/applications_store.json");
+    const dir = path.dirname(defaultPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    return defaultPath;
+  } catch {
+    const tmpDir = path.join(os.tmpdir(), "vvlf-data");
+    try {
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      }
+    } catch {}
+    return path.join(tmpDir, "applications_store.json");
   }
 }
 
 function readLocalApplications(): (InsertApplication & { id: number; createdAt: Date })[] {
   try {
-    ensureLocalStoreDir();
-    if (!fs.existsSync(LOCAL_STORE_PATH)) return [];
-    const content = fs.readFileSync(LOCAL_STORE_PATH, "utf-8");
-    return JSON.parse(content);
-  } catch {
-    return [];
+    const storePath = getLocalStorePath();
+    if (fs.existsSync(storePath)) {
+      const content = fs.readFileSync(storePath, "utf-8");
+      const parsed = JSON.parse(content);
+      return [...inMemoryStore, ...parsed];
+    }
+  } catch (err) {
+    console.warn("[LocalStore] File read error:", err);
   }
+  return inMemoryStore;
 }
 
 function writeLocalApplication(app: InsertApplication) {
-  ensureLocalStoreDir();
-  const list = readLocalApplications();
   const newEntry = {
     ...app,
-    id: list.length + 1,
+    id: inMemoryStore.length + 1,
     createdAt: new Date(),
   };
-  list.unshift(newEntry);
-  fs.writeFileSync(LOCAL_STORE_PATH, JSON.stringify(list, null, 2), "utf-8");
-}
 
-export async function createApplication(application: InsertApplication): Promise<void> {
-  const db = await getDb();
-  if (db) {
-    await db.insert(applications).values(application);
-  } else {
-    console.log("[LocalStore] Storing application locally in data/applications_store.json");
-    writeLocalApplication(application);
+  try {
+    const storePath = getLocalStorePath();
+    let list: (InsertApplication & { id: number; createdAt: Date })[] = [];
+    if (fs.existsSync(storePath)) {
+      try {
+        list = JSON.parse(fs.readFileSync(storePath, "utf-8"));
+      } catch {}
+    }
+    newEntry.id = list.length + 1;
+    list.unshift(newEntry);
+    fs.writeFileSync(storePath, JSON.stringify(list, null, 2), "utf-8");
+    console.log(`[LocalStore] Saved application #${newEntry.id} to ${storePath}`);
+  } catch (err) {
+    console.warn("[LocalStore] Read-only filesystem detected, keeping in memory store:", err);
+    inMemoryStore.unshift(newEntry);
   }
 }
 
+export async function createApplication(application: InsertApplication): Promise<void> {
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.insert(applications).values(application);
+      return;
+    }
+  } catch (dbError) {
+    console.warn("[Database] Database unavailable, falling back to local/memory store:", dbError);
+  }
+
+  writeLocalApplication(application);
+}
+
 export async function listApplications() {
-  const db = await getDb();
-  if (db) {
-    return db.select().from(applications).orderBy(desc(applications.createdAt));
+  try {
+    const db = await getDb();
+    if (db) {
+      return await db.select().from(applications).orderBy(desc(applications.createdAt));
+    }
+  } catch (dbError) {
+    console.warn("[Database] Query failed, falling back to local list:", dbError);
   }
   return readLocalApplications();
 }

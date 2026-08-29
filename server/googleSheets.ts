@@ -19,13 +19,16 @@ export interface ApplicationPayload {
   submittedAt?: string;
 }
 
+const DEFAULT_GOOGLE_SHEET_WEBHOOK_URL =
+  "https://script.google.com/macros/s/AKfycbz94rbvo1Lg83JM2gdLBOKoIf9pfhcaNH9fWHp4WD8v_8YmEWix4-hZr9jXZSZY5VJy/exec";
+
 /**
  * Sync to Google Sheets via Google Apps Script Webhook
  */
 export async function syncToGoogleSheets(data: ApplicationPayload): Promise<{ success: boolean; error?: string }> {
-  const webhookUrl = process.env.GOOGLE_SHEET_WEBHOOK_URL;
+  const webhookUrl = process.env.GOOGLE_SHEET_WEBHOOK_URL || DEFAULT_GOOGLE_SHEET_WEBHOOK_URL;
   if (!webhookUrl || !webhookUrl.startsWith("http")) {
-    return { success: false, error: "GOOGLE_SHEET_WEBHOOK_URL is not configured in .env" };
+    return { success: false, error: "GOOGLE_SHEET_WEBHOOK_URL is not configured" };
   }
 
   try {
