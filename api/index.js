@@ -112,6 +112,8 @@ var ENV = {
 };
 
 // server/db.ts
+import fs from "fs";
+import path from "path";
 var _client = null;
 var _db = null;
 async function getDb() {
@@ -158,15 +160,49 @@ async function getUserByOpenId(openId) {
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
 }
+var LOCAL_STORE_PATH = path.resolve(import.meta.dirname, "../data/applications_store.json");
+function ensureLocalStoreDir() {
+  const dir = path.dirname(LOCAL_STORE_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+function readLocalApplications() {
+  try {
+    ensureLocalStoreDir();
+    if (!fs.existsSync(LOCAL_STORE_PATH)) return [];
+    const content = fs.readFileSync(LOCAL_STORE_PATH, "utf-8");
+    return JSON.parse(content);
+  } catch {
+    return [];
+  }
+}
+function writeLocalApplication(app2) {
+  ensureLocalStoreDir();
+  const list = readLocalApplications();
+  const newEntry = {
+    ...app2,
+    id: list.length + 1,
+    createdAt: /* @__PURE__ */ new Date()
+  };
+  list.unshift(newEntry);
+  fs.writeFileSync(LOCAL_STORE_PATH, JSON.stringify(list, null, 2), "utf-8");
+}
 async function createApplication(application) {
   const db = await getDb();
-  if (!db) throw new Error("Application storage is unavailable.");
-  await db.insert(applications).values(application);
+  if (db) {
+    await db.insert(applications).values(application);
+  } else {
+    console.log("[LocalStore] Storing application locally in data/applications_store.json");
+    writeLocalApplication(application);
+  }
 }
 async function listApplications() {
   const db = await getDb();
-  if (!db) throw new Error("Application storage is unavailable.");
-  return db.select().from(applications).orderBy(desc(applications.createdAt));
+  if (db) {
+    return db.select().from(applications).orderBy(desc(applications.createdAt));
+  }
+  return readLocalApplications();
 }
 function makeStudioSlug(title) {
   const base = title.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 80) || "form";
@@ -579,6 +615,8 @@ function registerOAuthRoutes(app2) {
 }
 
 // server/_core/storageProxy.ts
+import fs2 from "fs";
+import path2 from "path";
 function registerStorageProxy(app2) {
   app2.get("/manus-storage/*", async (req, res) => {
     const key = req.params[0];
@@ -586,8 +624,18 @@ function registerStorageProxy(app2) {
       res.status(400).send("Missing storage key");
       return;
     }
+    const localCandidates = [
+      path2.resolve(import.meta.dirname, "../../client/public/manus-storage", key),
+      path2.resolve(import.meta.dirname, "../../dist/public/manus-storage", key)
+    ];
+    for (const localPath of localCandidates) {
+      if (fs2.existsSync(localPath)) {
+        res.sendFile(localPath);
+        return;
+      }
+    }
     if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-      res.status(500).send("Storage proxy not configured");
+      res.status(404).send("Storage file not found");
       return;
     }
     try {
@@ -806,7 +854,7 @@ var applicationInputSchema = z2.object({
   college: z2.string().trim().min(2, "Please enter your college name.").max(200),
   department: z2.string().trim().min(2, "Please enter your department or branch.").max(160),
   studyYear: z2.enum(studyYearOptions),
-  whatsapp: z2.string().trim().min(7, "Please enter a valid WhatsApp number.").max(32),
+  whatsapp: z2.string().trim().regex(/^\d{10}$/, "WhatsApp number must be exactly 10 digits (numbers only)."),
   email: z2.string().trim().email("Please enter a valid email address.").max(320),
   track: z2.enum(trackOptions),
   tools: z2.array(z2.string().trim().min(1).max(100)).min(1, "Choose at least one capability.").max(6),
@@ -866,6 +914,181 @@ function validateStudioResponse(questions, rawAnswers) {
   return answers;
 }
 
+// server/googleSheets.ts
+async function syncToGoogleSheets(data) {
+  const webhookUrl = process.env.GOOGLE_SHEET_WEBHOOK_URL;
+  if (!webhookUrl || !webhookUrl.startsWith("http")) {
+    return { success: false, error: "GOOGLE_SHEET_WEBHOOK_URL is not configured in .env" };
+  }
+  try {
+    const payload = {
+      ...data,
+      submittedAt: data.submittedAt || (/* @__PURE__ */ new Date()).toISOString(),
+      toolsFormatted: Array.isArray(data.tools) ? data.tools.join(", ") : data.tools
+    };
+    console.log(`[Google Sheets] Sending submission for "${data.fullName}" to Google Sheet...`);
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      redirect: "follow"
+    });
+    if (!response.ok && response.status !== 302) {
+      const errorText = await response.text().catch(() => "");
+      console.error(`[Google Sheets] Webhook responded with HTTP ${response.status}: ${errorText}`);
+      return { success: false, error: `HTTP ${response.status}: ${errorText}` };
+    }
+    console.log(`[Google Sheets] Successfully synced submission for "${data.fullName}" to Google Sheet!`);
+    return { success: true };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[Google Sheets] Sync failed:", errorMsg);
+    return { success: false, error: errorMsg };
+  }
+}
+async function syncToExcelOnline(data) {
+  const excelWebhookUrl = process.env.EXCEL_WEBHOOK_URL || process.env.MICROSOFT_POWER_AUTOMATE_URL;
+  if (!excelWebhookUrl || !excelWebhookUrl.startsWith("http")) {
+    return { success: false, error: "EXCEL_WEBHOOK_URL is not configured in .env" };
+  }
+  try {
+    const payload = {
+      submittedAt: data.submittedAt || (/* @__PURE__ */ new Date()).toISOString(),
+      fullName: data.fullName,
+      college: data.college,
+      department: data.department,
+      studyYear: data.studyYear,
+      whatsapp: data.whatsapp,
+      email: data.email,
+      track: data.track,
+      tools: Array.isArray(data.tools) ? data.tools.join(", ") : data.tools,
+      focus: data.focus,
+      portfolioLink: data.portfolioLink || "N/A",
+      goal: data.goal,
+      workstation: data.workstation,
+      consent: data.consent ? "Yes" : "No"
+    };
+    console.log(`[Excel Online] Sending submission for "${data.fullName}" to OneDrive Excel...`);
+    const response = await fetch(excelWebhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      console.error(`[Excel Online] Webhook error HTTP ${response.status}: ${errorText}`);
+      return { success: false, error: `HTTP ${response.status}: ${errorText}` };
+    }
+    console.log(`[Excel Online] Successfully synced submission for "${data.fullName}" to OneDrive Excel!`);
+    return { success: true };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[Excel Online] Sync failed:", errorMsg);
+    return { success: false, error: errorMsg };
+  }
+}
+async function syncAllSheets(data) {
+  const results = await Promise.allSettled([
+    syncToGoogleSheets(data),
+    syncToExcelOnline(data)
+  ]);
+  return results;
+}
+
+// server/excelExport.ts
+import fs3 from "fs";
+import path3 from "path";
+var CSV_FILE_PATH = path3.resolve(import.meta.dirname, "../data/VVLF_Student_Applications.csv");
+function escapeCsvField(value) {
+  if (value === null || value === void 0) return '""';
+  const str = String(value);
+  if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return `"${str}"`;
+}
+async function generateCsvString() {
+  const applications2 = await listApplications();
+  const headers = [
+    "ID",
+    "Submission Date (IST)",
+    "Full Name",
+    "College / University",
+    "Department / Branch",
+    "Current Year",
+    "WhatsApp Number",
+    "Email Address",
+    "Focus Track",
+    "Tools & Capabilities",
+    "Focus / Approach",
+    "Portfolio / Project Link",
+    "Primary Goal",
+    "Workstation Access",
+    "Consent Confirmed"
+  ];
+  const rows = [headers.join(",")];
+  for (const app2 of applications2) {
+    let toolsText = "";
+    try {
+      const parsed = JSON.parse(app2.tools || "[]");
+      toolsText = Array.isArray(parsed) ? parsed.join(", ") : String(parsed);
+    } catch {
+      toolsText = app2.tools || "";
+    }
+    const dateStr = app2.createdAt ? new Date(app2.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "";
+    const row = [
+      escapeCsvField(app2.id),
+      escapeCsvField(dateStr),
+      escapeCsvField(app2.fullName),
+      escapeCsvField(app2.college),
+      escapeCsvField(app2.department),
+      escapeCsvField(app2.studyYear),
+      escapeCsvField(app2.whatsapp),
+      escapeCsvField(app2.email),
+      escapeCsvField(app2.track),
+      escapeCsvField(toolsText),
+      escapeCsvField(app2.focus),
+      escapeCsvField(app2.portfolioLink || "N/A"),
+      escapeCsvField(app2.goal),
+      escapeCsvField(app2.workstation),
+      escapeCsvField(app2.consent ? "Yes" : "No")
+    ];
+    rows.push(row.join(","));
+  }
+  return rows.join("\r\n");
+}
+async function updateLocalCsvFile() {
+  try {
+    const csvContent = await generateCsvString();
+    const dir = path3.dirname(CSV_FILE_PATH);
+    if (!fs3.existsSync(dir)) {
+      fs3.mkdirSync(dir, { recursive: true });
+    }
+    fs3.writeFileSync(CSV_FILE_PATH, "\uFEFF" + csvContent, "utf-8");
+    console.log(`[Excel Export] Updated Excel/CSV file at: ${CSV_FILE_PATH}`);
+  } catch (error) {
+    console.error("[Excel Export] Failed to update local CSV file:", error);
+  }
+}
+function registerExcelExportRoute(app2) {
+  const handler = async (_req, res) => {
+    try {
+      const csvContent = await generateCsvString();
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="VVLF_Student_Applications_${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.csv"`
+      );
+      res.status(200).send("\uFEFF" + csvContent);
+    } catch (error) {
+      console.error("[Excel Export] Error generating export:", error);
+      res.status(500).send("Error generating spreadsheet export");
+    }
+  };
+  app2.get("/api/export-csv", handler);
+  app2.get("/api/export-excel", handler);
+}
+
 // server/routers.ts
 function publicQuestion(question) {
   let options = [];
@@ -906,6 +1129,23 @@ var appRouter = router({
           goal: input.goal,
           workstation: input.workstation,
           consent: input.consent
+        });
+        syncAllSheets({
+          fullName: input.fullName,
+          college: input.college,
+          department: input.department,
+          studyYear: input.studyYear,
+          whatsapp: input.whatsapp,
+          email: input.email,
+          track: input.track,
+          tools: input.tools,
+          focus: input.focus,
+          portfolioLink: input.portfolioLink,
+          goal: input.goal,
+          workstation: input.workstation,
+          consent: input.consent
+        }).catch((err) => console.error("[Sheets Sync] Error:", err));
+        updateLocalCsvFile().catch(() => {
         });
         return { success: true };
       } catch (error) {
@@ -979,6 +1219,7 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 registerStorageProxy(app);
 registerOAuthRoutes(app);
+registerExcelExportRoute(app);
 app.use("/api/trpc", createExpressMiddleware({ router: appRouter, createContext }));
 var handler_default = app;
 export {

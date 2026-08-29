@@ -7,6 +7,8 @@ import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_
 import { applicationInputSchema } from "./application";
 import { createApplication, createOwnedStudioForm, createStudioResponse, getOwnedStudioForm, getPublishedStudioForm, listApplications, listOwnedStudioForms, listOwnedStudioResponses, setStudioFormStatus, updateOwnedStudioForm } from "./db";
 import { studioFormInputSchema, validateStudioResponse } from "./formStudio";
+import { syncAllSheets } from "./googleSheets";
+import { updateLocalCsvFile } from "./excelExport";
 
 function publicQuestion(question: { id: number; kind: "short_text" | "long_text" | "email" | "phone" | "single_choice" | "multiple_choice" | "consent"; label: string; helpText: string | null; options: string | null; required: boolean; position: number }) {
   let options: string[] = [];
@@ -49,6 +51,27 @@ export const appRouter = router({
           workstation: input.workstation,
           consent: input.consent,
         });
+
+        // Trigger real-time sync to Google Sheets and Excel Online
+        syncAllSheets({
+          fullName: input.fullName,
+          college: input.college,
+          department: input.department,
+          studyYear: input.studyYear,
+          whatsapp: input.whatsapp,
+          email: input.email,
+          track: input.track,
+          tools: input.tools,
+          focus: input.focus,
+          portfolioLink: input.portfolioLink,
+          goal: input.goal,
+          workstation: input.workstation,
+          consent: input.consent,
+        }).catch((err) => console.error("[Sheets Sync] Error:", err));
+
+        // Update local spreadsheet file
+        updateLocalCsvFile().catch(() => {});
+
         return { success: true } as const;
       } catch (error) {
         console.error("[Application] Submission failed", error);

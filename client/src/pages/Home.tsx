@@ -106,6 +106,7 @@ export default function Home() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const submitApplication = trpc.application.submit.useMutation();
@@ -129,36 +130,130 @@ export default function Home() {
   };
 
   const toggleTool = (tool: string) => {
-    setForm((previous) => ({
-      ...previous,
-      tools: previous.tools.includes(tool) ? previous.tools.filter((item) => item !== tool) : [...previous.tools, tool],
-    }));
+    setForm((previous) => {
+      const updatedTools = previous.tools.includes(tool)
+        ? previous.tools.filter((item) => item !== tool)
+        : [...previous.tools, tool];
+      if (fieldErrors.tools) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          tools: updatedTools.length === 0 ? "Choose at least one capability." : "",
+        }));
+      }
+      return { ...previous, tools: updatedTools };
+    });
   };
 
-  const validateStep = () => {
-    if (step === 0) {
-      if (!form.fullName.trim() || !form.college.trim() || !form.department.trim() || !form.studyYear || !form.whatsapp.trim() || !form.email.trim() || !form.track) {
-        return "Please complete all required profile details and choose one focus track.";
-      }
-      if (!/^\S+@\S+\.\S+$/.test(form.email)) return "Please enter a valid email address.";
+  const validateField = (field: string, value: any): string => {
+    switch (field) {
+      case "fullName":
+        if (!String(value || "").trim()) return "Full name is required.";
+        if (String(value || "").trim().length < 2) return "Please enter at least 2 characters.";
+        return "";
+      case "college":
+        if (!String(value || "").trim()) return "College or university name is required.";
+        if (String(value || "").trim().length < 2) return "Please enter at least 2 characters.";
+        return "";
+      case "department":
+        if (!String(value || "").trim()) return "Department / branch is required.";
+        if (String(value || "").trim().length < 2) return "Please enter at least 2 characters.";
+        return "";
+      case "studyYear":
+        if (!value) return "Please choose your current year.";
+        return "";
+      case "whatsapp":
+        if (!String(value || "").trim()) return "WhatsApp number is required.";
+        if (!/^\d{10}$/.test(String(value || "").trim())) {
+          return "WhatsApp number must be exactly 10 digits (numbers only).";
+        }
+        return "";
+      case "email":
+        if (!String(value || "").trim()) return "Email address is required.";
+        if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(String(value || "").trim())) {
+          return "Please enter a valid email address (e.g. name@example.com).";
+        }
+        return "";
+      case "track":
+        if (!value) return "Please select one focus track.";
+        return "";
+      case "tools":
+        if (!Array.isArray(value) || value.length === 0) return "Choose at least one capability.";
+        return "";
+      case "focus":
+        if (!value) return "Please select the answer that fits you best.";
+        return "";
+      case "goal":
+        if (!value) return "Please choose your primary goal.";
+        return "";
+      case "workstation":
+        if (!value) return "Please select your workstation access.";
+        return "";
+      case "consent":
+        if (!value) return "Please accept the privacy notice and consent.";
+        return "";
+      default:
+        return "";
     }
-    if (step === 1 && (!form.tools.length || !form.focus)) return "Choose at least one capability and the answer that fits you best.";
-    if (step === 2 && (!form.goal || !form.workstation || !form.consent)) return "Choose your goal and workstation access, then accept the consent statement.";
-    return "";
+  };
+
+  const validateStep = (stepNumber: number) => {
+    const errors: Record<string, string> = {};
+    if (stepNumber === 0) {
+      const nameErr = validateField("fullName", form.fullName);
+      if (nameErr) errors.fullName = nameErr;
+
+      const collegeErr = validateField("college", form.college);
+      if (collegeErr) errors.college = collegeErr;
+
+      const deptErr = validateField("department", form.department);
+      if (deptErr) errors.department = deptErr;
+
+      const yearErr = validateField("studyYear", form.studyYear);
+      if (yearErr) errors.studyYear = yearErr;
+
+      const phoneErr = validateField("whatsapp", form.whatsapp);
+      if (phoneErr) errors.whatsapp = phoneErr;
+
+      const emailErr = validateField("email", form.email);
+      if (emailErr) errors.email = emailErr;
+
+      const trackErr = validateField("track", form.track);
+      if (trackErr) errors.track = trackErr;
+    } else if (stepNumber === 1) {
+      const toolsErr = validateField("tools", form.tools);
+      if (toolsErr) errors.tools = toolsErr;
+
+      const focusErr = validateField("focus", form.focus);
+      if (focusErr) errors.focus = focusErr;
+    } else if (stepNumber === 2) {
+      const goalErr = validateField("goal", form.goal);
+      if (goalErr) errors.goal = goalErr;
+
+      const workstationErr = validateField("workstation", form.workstation);
+      if (workstationErr) errors.workstation = workstationErr;
+
+      const consentErr = validateField("consent", form.consent);
+      if (consentErr) errors.consent = consentErr;
+    }
+
+    setFieldErrors(errors);
+    const firstErrorMessage = Object.values(errors)[0] || "";
+    return firstErrorMessage;
   };
 
   const nextStep = () => {
-    const validationMessage = validateStep();
+    const validationMessage = validateStep(step);
     if (validationMessage) {
       setError(validationMessage);
       return;
     }
     setError("");
+    setFieldErrors({});
     setStep((current) => Math.min(current + 1, 2));
   };
 
   const submit = async () => {
-    const validationMessage = validateStep();
+    const validationMessage = validateStep(step);
     if (validationMessage || !form.track) {
       setError(validationMessage || "Choose a focus track before submitting.");
       return;
@@ -250,28 +345,166 @@ export default function Home() {
               <p className="step-intro">Tell us a little about yourself, then choose the direction that feels most exciting. This is not a test; it helps us shape the right project context for you.</p>
               <div className="trust-line"><CircleHelp size={17} /><span>Required fields are marked. Your answers are saved only when you submit.</span></div>
               <div className="field-grid">
-                <label>Full name *<input value={form.fullName} onChange={(event) => update("fullName", event.target.value)} placeholder="Your full name" /></label>
-                <label>College *<input value={form.college} onChange={(event) => update("college", event.target.value)} placeholder="College or university" /></label>
-                <label>Department / branch *<input value={form.department} onChange={(event) => update("department", event.target.value)} placeholder="For example, CSE or ECE" /></label>
-                <label>Current year *<select value={form.studyYear} onChange={(event) => update("studyYear", event.target.value as FormState["studyYear"])}><option value="">Choose one</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select></label>
-                <label>WhatsApp number *<input value={form.whatsapp} onChange={(event) => update("whatsapp", event.target.value)} placeholder="Including country code if relevant" inputMode="tel" /></label>
-                <label>Email address *<input value={form.email} onChange={(event) => update("email", event.target.value)} placeholder="you@example.com" type="email" /></label>
+                <label>
+                  Full name *
+                  <input
+                    className={fieldErrors.fullName ? "input-invalid" : ""}
+                    value={form.fullName}
+                    onChange={(event) => {
+                      update("fullName", event.target.value);
+                      if (fieldErrors.fullName) {
+                        setFieldErrors((prev) => ({ ...prev, fullName: validateField("fullName", event.target.value) }));
+                      }
+                    }}
+                    placeholder="Your full name"
+                  />
+                  {fieldErrors.fullName && <span className="field-error-text">{fieldErrors.fullName}</span>}
+                </label>
+
+                <label>
+                  College *
+                  <input
+                    className={fieldErrors.college ? "input-invalid" : ""}
+                    value={form.college}
+                    onChange={(event) => {
+                      update("college", event.target.value);
+                      if (fieldErrors.college) {
+                        setFieldErrors((prev) => ({ ...prev, college: validateField("college", event.target.value) }));
+                      }
+                    }}
+                    placeholder="College or university"
+                  />
+                  {fieldErrors.college && <span className="field-error-text">{fieldErrors.college}</span>}
+                </label>
+
+                <label>
+                  Department / branch *
+                  <input
+                    className={fieldErrors.department ? "input-invalid" : ""}
+                    value={form.department}
+                    onChange={(event) => {
+                      update("department", event.target.value);
+                      if (fieldErrors.department) {
+                        setFieldErrors((prev) => ({ ...prev, department: validateField("department", event.target.value) }));
+                      }
+                    }}
+                    placeholder="For example, CSE or ECE"
+                  />
+                  {fieldErrors.department && <span className="field-error-text">{fieldErrors.department}</span>}
+                </label>
+
+                <label>
+                  Current year *
+                  <select
+                    className={fieldErrors.studyYear ? "input-invalid" : ""}
+                    value={form.studyYear}
+                    onChange={(event) => {
+                      const yr = event.target.value as FormState["studyYear"];
+                      update("studyYear", yr);
+                      if (fieldErrors.studyYear) {
+                        setFieldErrors((prev) => ({ ...prev, studyYear: validateField("studyYear", yr) }));
+                      }
+                    }}
+                  >
+                    <option value="">Choose one</option>
+                    <option>1st Year</option>
+                    <option>2nd Year</option>
+                    <option>3rd Year</option>
+                    <option>4th Year</option>
+                  </select>
+                  {fieldErrors.studyYear && <span className="field-error-text">{fieldErrors.studyYear}</span>}
+                </label>
+
+                <label>
+                  WhatsApp number *
+                  <input
+                    className={fieldErrors.whatsapp ? "input-invalid" : ""}
+                    value={form.whatsapp}
+                    maxLength={10}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    onChange={(event) => {
+                      const digitsOnly = event.target.value.replace(/\D/g, "").slice(0, 10);
+                      update("whatsapp", digitsOnly);
+                      if (fieldErrors.whatsapp) {
+                        setFieldErrors((prev) => ({ ...prev, whatsapp: validateField("whatsapp", digitsOnly) }));
+                      }
+                    }}
+                    placeholder="10-digit mobile number"
+                  />
+                  <div className="field-hint-text">
+                    {fieldErrors.whatsapp ? (
+                      <span className="field-error-text" style={{ margin: 0 }}>{fieldErrors.whatsapp}</span>
+                    ) : (
+                      <span>10 digits only</span>
+                    )}
+                    <span>{form.whatsapp.length}/10</span>
+                  </div>
+                </label>
+
+                <label>
+                  Email address *
+                  <input
+                    className={fieldErrors.email ? "input-invalid" : ""}
+                    value={form.email}
+                    type="email"
+                    onChange={(event) => {
+                      update("email", event.target.value);
+                      if (fieldErrors.email) {
+                        setFieldErrors((prev) => ({ ...prev, email: validateField("email", event.target.value) }));
+                      }
+                    }}
+                    placeholder="you@example.com"
+                  />
+                  {fieldErrors.email && <span className="field-error-text">{fieldErrors.email}</span>}
+                </label>
               </div>
-              <fieldset className="track-fieldset"><legend>Which focus track feels most exciting to you? *</legend><div className="track-grid">
-                {tracks.map((track) => <button type="button" className={`track-card ${form.track === track.id ? "selected" : ""}`} onClick={() => { update("track", track.id); update("tools", []); update("focus", ""); }} key={track.id}><span className="track-index">{form.track === track.id ? <Check size={15} /> : "→"}</span><strong>{track.id}</strong><small>{track.summary}</small></button>)}
-              </div></fieldset>
+
+              <fieldset className="track-fieldset">
+                <legend>Which focus track feels most exciting to you? *</legend>
+                {fieldErrors.track && <span className="field-error-text" style={{ marginBottom: "8px" }}>{fieldErrors.track}</span>}
+                <div className="track-grid">
+                  {tracks.map((track) => (
+                    <button
+                      type="button"
+                      className={`track-card ${form.track === track.id ? "selected" : ""}`}
+                      onClick={() => {
+                        update("track", track.id);
+                        update("tools", []);
+                        update("focus", "");
+                        if (fieldErrors.track) {
+                          setFieldErrors((prev) => ({ ...prev, track: "" }));
+                        }
+                      }}
+                      key={track.id}
+                    >
+                      <span className="track-index">{form.track === track.id ? <Check size={15} /> : "→"}</span>
+                      <strong>{track.id}</strong>
+                      <small>{track.summary}</small>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
             </section>}
 
             {step === 1 && currentTrack && <section className="step-panel panel-enter">
               <p className="eyebrow">02 / Your working style</p>
               <h2>{currentTrack.id} is a great place to start.</h2>
               <p className="step-intro">You do not need to be an expert. We are more interested in the tools you are curious about and the way you approach a new challenge.</p>
-              <fieldset className="choice-fieldset"><legend>What tools do you currently use or want to learn? *</legend><div className="choice-grid">
-                {currentTrack.tools.map((tool) => <button className={`choice-card ${form.tools.includes(tool) ? "selected" : ""}`} type="button" onClick={() => toggleTool(tool)} key={tool}><span>{form.tools.includes(tool) ? <Check size={15} /> : "+"}</span>{tool}</button>)}
-              </div></fieldset>
-              <fieldset className="choice-fieldset"><legend>{currentTrack.focusPrompt} *</legend><div className="focus-list">
-                {currentTrack.focus.map((focus) => <button className={`focus-choice ${form.focus === focus ? "selected" : ""}`} type="button" onClick={() => update("focus", focus)} key={focus}><span className="radio-dot" />{focus}</button>)}
-              </div></fieldset>
+              <fieldset className="choice-fieldset">
+                <legend>What tools do you currently use or want to learn? *</legend>
+                {fieldErrors.tools && <span className="field-error-text" style={{ marginBottom: "8px" }}>{fieldErrors.tools}</span>}
+                <div className="choice-grid">
+                  {currentTrack.tools.map((tool) => <button className={`choice-card ${form.tools.includes(tool) ? "selected" : ""}`} type="button" onClick={() => toggleTool(tool)} key={tool}><span>{form.tools.includes(tool) ? <Check size={15} /> : "+"}</span>{tool}</button>)}
+                </div>
+              </fieldset>
+              <fieldset className="choice-fieldset">
+                <legend>{currentTrack.focusPrompt} *</legend>
+                {fieldErrors.focus && <span className="field-error-text" style={{ marginBottom: "8px" }}>{fieldErrors.focus}</span>}
+                <div className="focus-list">
+                  {currentTrack.focus.map((focus) => <button className={`focus-choice ${form.focus === focus ? "selected" : ""}`} type="button" onClick={() => { update("focus", focus); if (fieldErrors.focus) setFieldErrors((prev) => ({ ...prev, focus: "" })); }} key={focus}><span className="radio-dot" />{focus}</button>)}
+                </div>
+              </fieldset>
               <label className="link-label">Optional sample or portfolio link<input value={form.portfolioLink} onChange={(event) => update("portfolioLink", event.target.value)} placeholder="https://..." /><small>{currentTrack.linkHint} No link? Leave it blank.</small></label>
             </section>}
 
@@ -279,13 +512,22 @@ export default function Home() {
               <p className="eyebrow">03 / One final check</p>
               <h2>Tell us what you hope to take forward.</h2>
               <p className="step-intro">These last answers help VVLF understand the kind of growth and support that will be most useful to you.</p>
-              <fieldset className="choice-fieldset"><legend>What is your primary goal for joining this track? *</legend><div className="focus-list">
-                {["Build real projects to boost my resume", "Learn modern tools & AI workflows", "Gain leadership & event experience", "Connect with peers and mentors"].map((goal) => <button className={`focus-choice ${form.goal === goal ? "selected" : ""}`} type="button" onClick={() => update("goal", goal as FormState["goal"])} key={goal}><span className="radio-dot" />{goal}</button>)}
-              </div></fieldset>
-              <fieldset className="choice-fieldset"><legend>Workstation access *</legend><div className="choice-grid two-up">
-                {["I have my own personal laptop", "I will use campus systems and foundation labs"].map((workstation) => <button className={`choice-card ${form.workstation === workstation ? "selected" : ""}`} type="button" onClick={() => update("workstation", workstation as FormState["workstation"])} key={workstation}><span>{form.workstation === workstation ? <Check size={15} /> : "+"}</span>{workstation}</button>)}
-              </div></fieldset>
-              <label className="consent"><input type="checkbox" required checked={form.consent} onChange={(event) => update("consent", event.target.checked)} /><span><strong>Privacy notice and consent *</strong><br />I confirm that my information is accurate. I agree that VVLF may securely use my contact and application details only to review this application, communicate about the program, and manage the selection process.</span></label>
+              <fieldset className="choice-fieldset">
+                <legend>What is your primary goal for joining this track? *</legend>
+                {fieldErrors.goal && <span className="field-error-text" style={{ marginBottom: "8px" }}>{fieldErrors.goal}</span>}
+                <div className="focus-list">
+                  {["Build real projects to boost my resume", "Learn modern tools & AI workflows", "Gain leadership & event experience", "Connect with peers and mentors"].map((goal) => <button className={`focus-choice ${form.goal === goal ? "selected" : ""}`} type="button" onClick={() => { update("goal", goal as FormState["goal"]); if (fieldErrors.goal) setFieldErrors((prev) => ({ ...prev, goal: "" })); }} key={goal}><span className="radio-dot" />{goal}</button>)}
+                </div>
+              </fieldset>
+              <fieldset className="choice-fieldset">
+                <legend>Workstation access *</legend>
+                {fieldErrors.workstation && <span className="field-error-text" style={{ marginBottom: "8px" }}>{fieldErrors.workstation}</span>}
+                <div className="choice-grid two-up">
+                  {["I have my own personal laptop", "I will use campus systems and foundation labs"].map((workstation) => <button className={`choice-card ${form.workstation === workstation ? "selected" : ""}`} type="button" onClick={() => { update("workstation", workstation as FormState["workstation"]); if (fieldErrors.workstation) setFieldErrors((prev) => ({ ...prev, workstation: "" })); }} key={workstation}><span>{form.workstation === workstation ? <Check size={15} /> : "+"}</span>{workstation}</button>)}
+                </div>
+              </fieldset>
+              <label className="consent"><input type="checkbox" required checked={form.consent} onChange={(event) => { update("consent", event.target.checked); if (fieldErrors.consent) setFieldErrors((prev) => ({ ...prev, consent: "" })); }} /><span><strong>Privacy notice and consent *</strong><br />I confirm that my information is accurate. I agree that VVLF may securely use my contact and application details only to review this application, communicate about the program, and manage the selection process.</span></label>
+              {fieldErrors.consent && <span className="field-error-text" style={{ margin: "4px 0 0 15px" }}>{fieldErrors.consent}</span>}
               <div className="support-detail"><img src={WORKBENCH_IMAGE} alt="Student project workbench" /><p><strong>What happens next?</strong> After submission, your application is saved for the VVLF team. If your profile fits the next stage, they will use the contact details you provided.</p></div>
             </section>}
 

@@ -27,7 +27,10 @@ export const applicationInputSchema = z.object({
   college: z.string().trim().min(2, "Please enter your college name.").max(200),
   department: z.string().trim().min(2, "Please enter your department or branch.").max(160),
   studyYear: z.enum(studyYearOptions),
-  whatsapp: z.string().trim().min(7, "Please enter a valid WhatsApp number.").max(32),
+  whatsapp: z
+    .string()
+    .trim()
+    .regex(/^\d{10}$/, "WhatsApp number must be exactly 10 digits (numbers only)."),
   email: z.string().trim().email("Please enter a valid email address.").max(320),
   track: z.enum(trackOptions),
   tools: z.array(z.string().trim().min(1).max(100)).min(1, "Choose at least one capability.").max(6),

@@ -69,16 +69,57 @@ export async function getUserByOpenId(openId: string) {
   return result[0];
 }
 
+import fs from "fs";
+import path from "path";
+
+const LOCAL_STORE_PATH = path.resolve(import.meta.dirname, "../data/applications_store.json");
+
+function ensureLocalStoreDir() {
+  const dir = path.dirname(LOCAL_STORE_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+function readLocalApplications(): (InsertApplication & { id: number; createdAt: Date })[] {
+  try {
+    ensureLocalStoreDir();
+    if (!fs.existsSync(LOCAL_STORE_PATH)) return [];
+    const content = fs.readFileSync(LOCAL_STORE_PATH, "utf-8");
+    return JSON.parse(content);
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalApplication(app: InsertApplication) {
+  ensureLocalStoreDir();
+  const list = readLocalApplications();
+  const newEntry = {
+    ...app,
+    id: list.length + 1,
+    createdAt: new Date(),
+  };
+  list.unshift(newEntry);
+  fs.writeFileSync(LOCAL_STORE_PATH, JSON.stringify(list, null, 2), "utf-8");
+}
+
 export async function createApplication(application: InsertApplication): Promise<void> {
   const db = await getDb();
-  if (!db) throw new Error("Application storage is unavailable.");
-  await db.insert(applications).values(application);
+  if (db) {
+    await db.insert(applications).values(application);
+  } else {
+    console.log("[LocalStore] Storing application locally in data/applications_store.json");
+    writeLocalApplication(application);
+  }
 }
 
 export async function listApplications() {
   const db = await getDb();
-  if (!db) throw new Error("Application storage is unavailable.");
-  return db.select().from(applications).orderBy(desc(applications.createdAt));
+  if (db) {
+    return db.select().from(applications).orderBy(desc(applications.createdAt));
+  }
+  return readLocalApplications();
 }
 
 function makeStudioSlug(title: string) {

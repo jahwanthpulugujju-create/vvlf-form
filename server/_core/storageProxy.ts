@@ -1,4 +1,6 @@
 import type { Express } from "express";
+import fs from "fs";
+import path from "path";
 import { ENV } from "./env";
 
 export function registerStorageProxy(app: Express) {
@@ -9,8 +11,19 @@ export function registerStorageProxy(app: Express) {
       return;
     }
 
+    const localCandidates = [
+      path.resolve(import.meta.dirname, "../../client/public/manus-storage", key),
+      path.resolve(import.meta.dirname, "../../dist/public/manus-storage", key),
+    ];
+    for (const localPath of localCandidates) {
+      if (fs.existsSync(localPath)) {
+        res.sendFile(localPath);
+        return;
+      }
+    }
+
     if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-      res.status(500).send("Storage proxy not configured");
+      res.status(404).send("Storage file not found");
       return;
     }
 
