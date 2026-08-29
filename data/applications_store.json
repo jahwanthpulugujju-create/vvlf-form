@@ -1,5 +1,22 @@
 [
   {
+    "fullName": "Pooja Reddy",
+    "college": "B V Raju Institute of Technology",
+    "department": "Computer Science and Engineering",
+    "studyYear": "2nd Year",
+    "whatsapp": "9876543210",
+    "email": "pooja.reddy@example.com",
+    "track": "Tech & Web",
+    "tools": "[\"Modern Web (React, Next.js, Tailwind)\"]",
+    "focus": "Debug line-by-line",
+    "portfolioLink": null,
+    "goal": "Build real projects to boost my resume",
+    "workstation": "I will use campus systems and foundation labs",
+    "consent": true,
+    "id": 7,
+    "createdAt": "2026-08-29T17:27:59.767Z"
+  },
+  {
     "fullName": "qwerty",
     "college": "duab",
     "department": "dug",
