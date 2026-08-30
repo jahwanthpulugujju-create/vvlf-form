@@ -299,6 +299,11 @@ export default function Home() {
 
   useEffect(() => {
     trackFunnelEvent("landing_view");
+    // Capture acquisition source from URL (?source=instagram etc.)
+    const urlSource = new URLSearchParams(window.location.search).get("source");
+    if (urlSource) {
+      sessionStorage.setItem("vvlf_source", urlSource.slice(0, 100));
+    }
   }, []);
 
   const activeCategory = useMemo(() => {
@@ -498,6 +503,7 @@ export default function Home() {
         goals: form.goals,
         contribution: form.contribution.trim() || undefined,
         consent: true,
+        source: sessionStorage.getItem("vvlf_source") || undefined,
       });
 
       if (result.recommendedRole) {

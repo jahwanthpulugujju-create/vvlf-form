@@ -80,6 +80,9 @@ export const applicationInputSchema = z.object({
   // Consent
   consent: z.literal(true, { error: "Please confirm the consent statement before submitting." }),
 
+  // Acquisition source (from ?source= URL param)
+  source: z.string().trim().max(100).optional(),
+
   // Backward-compatible fields (optional in input, populated if missing)
   track: z.string().trim().optional(),
   tools: z.array(z.string().trim()).optional(),
@@ -123,6 +126,7 @@ export function enrichApplicationData(input: ApplicationInput) {
     goal: input.goals && input.goals.length > 0 ? input.goals.join(", ") : (input.goal || "Build real projects"),
     workstation: input.workstation || input.availabilityHours || "Personal laptop",
     recommendedRole,
+    source: input.source || null,
   };
 }
 

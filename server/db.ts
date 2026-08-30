@@ -137,7 +137,19 @@ export async function createApplication(application: InsertApplication): Promise
   try {
     const db = await getDb();
     if (db) {
-      await db.insert(applications).values(application);
+      // source column may not exist on older DB schemas — safe-insert with fallback
+      try {
+        await db.insert(applications).values(application);
+      } catch (colErr: unknown) {
+        const msg = colErr instanceof Error ? colErr.message : String(colErr);
+        if (msg.includes("source")) {
+          // Retry without source field for backward compat
+          const { source: _src, ...rest } = application as InsertApplication & { source?: string | null };
+          await db.insert(applications).values(rest as InsertApplication);
+        } else {
+          throw colErr;
+        }
+      }
       return;
     }
   } catch (dbError) {

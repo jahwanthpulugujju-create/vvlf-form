@@ -4,23 +4,45 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Admin from "./pages/Admin";
 import Home from "./pages/Home";
 
-function Router() { return <Switch><Route path="/" component={Home} /><Route path="/admin" component={Admin} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch>; }
+// Admin pages (lazy pattern — split into named imports for simplicity)
+import AdminLogin from "./pages/admin/AdminLogin";
+import Overview from "./pages/admin/Overview";
+import Applications from "./pages/admin/Applications";
+import Analytics from "./pages/admin/Analytics";
+import Talent from "./pages/admin/Talent";
+import Acquisition from "./pages/admin/Acquisition";
+import Skills from "./pages/admin/Skills";
+import AuditLog from "./pages/admin/AuditLog";
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
+function Router() {
+  return (
+    <Switch>
+      {/* Public form */}
+      <Route path="/" component={Home} />
+
+      {/* Admin */}
+      <Route path="/admin" component={() => { window.location.href = "/admin/overview"; return null; }} />
+      <Route path="/admin/login" component={AdminLogin} />
+      <Route path="/admin/overview" component={Overview} />
+      <Route path="/admin/applications" component={Applications} />
+      <Route path="/admin/analytics" component={Analytics} />
+      <Route path="/admin/talent" component={Talent} />
+      <Route path="/admin/acquisition" component={Acquisition} />
+      <Route path="/admin/skills" component={Skills} />
+      <Route path="/admin/audit" component={AuditLog} />
+
+      <Route path="/404" component={NotFound} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
 
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
           <Router />

@@ -34,6 +34,7 @@ export const applications = pgTable("applications", {
   goal: varchar("goal", { length: 180 }).notNull(),
   workstation: varchar("workstation", { length: 180 }).notNull(),
   consent: boolean("consent").notNull(),
+  source: varchar("source", { length: 100 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

@@ -63,6 +63,7 @@ var applications = pgTable("applications", {
   goal: varchar("goal", { length: 180 }).notNull(),
   workstation: varchar("workstation", { length: 180 }).notNull(),
   consent: boolean("consent").notNull(),
+  source: varchar("source", { length: 100 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 });
 var studioForms = pgTable("studio_forms", {
@@ -108,7 +109,11 @@ var ENV = {
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? ""
+  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  // Admin auth
+  adminUsername: process.env.ADMIN_USERNAME ?? "",
+  adminPasswordHash: process.env.ADMIN_PASSWORD_HASH ?? "",
+  adminDisplayName: process.env.ADMIN_DISPLAY_NAME ?? "Admin"
 };
 
 // server/db.ts
@@ -222,7 +227,17 @@ async function createApplication(application) {
   try {
     const db = await getDb();
     if (db) {
-      await db.insert(applications).values(application);
+      try {
+        await db.insert(applications).values(application);
+      } catch (colErr) {
+        const msg = colErr instanceof Error ? colErr.message : String(colErr);
+        if (msg.includes("source")) {
+          const { source: _src, ...rest } = application;
+          await db.insert(applications).values(rest);
+        } else {
+          throw colErr;
+        }
+      }
       return;
     }
   } catch (dbError) {
@@ -959,6 +974,8 @@ var applicationInputSchema = z2.object({
   contribution: z2.string().trim().min(2, "Please tell us what you would like to contribute to VVLF.").max(300),
   // Consent
   consent: z2.literal(true, { error: "Please confirm the consent statement before submitting." }),
+  // Acquisition source (from ?source= URL param)
+  source: z2.string().trim().max(100).optional(),
   // Backward-compatible fields (optional in input, populated if missing)
   track: z2.string().trim().optional(),
   tools: z2.array(z2.string().trim()).optional(),
@@ -996,7 +1013,8 @@ function enrichApplicationData(input) {
     goals: input.goals || (input.goal ? [input.goal] : ["Build real projects"]),
     goal: input.goals && input.goals.length > 0 ? input.goals.join(", ") : input.goal || "Build real projects",
     workstation: input.workstation || input.availabilityHours || "Personal laptop",
-    recommendedRole
+    recommendedRole,
+    source: input.source || null
   };
 }
 
@@ -1289,7 +1307,635 @@ function registerExcelExportRoute(app2) {
   app2.get("/api/export-excel", handler);
 }
 
+// server/adminAuth.ts
+import bcrypt from "bcryptjs";
+import { SignJWT as SignJWT2, jwtVerify as jwtVerify2 } from "jose";
+import fs4 from "fs";
+import path4 from "path";
+var ADMIN_COOKIE_NAME = "vvlf_admin_session";
+var SESSION_EXPIRY_HOURS = 8;
+var MAX_ATTEMPTS = 5;
+var WINDOW_MS = 15 * 60 * 1e3;
+var rateLimitMap = /* @__PURE__ */ new Map();
+function getAdminAccounts() {
+  if (process.env.ADMIN_ACCOUNTS) {
+    try {
+      const parsed = JSON.parse(process.env.ADMIN_ACCOUNTS);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {
+      console.warn("[AdminAuth] ADMIN_ACCOUNTS env is not valid JSON");
+    }
+  }
+  const username = process.env.ADMIN_USERNAME;
+  const passwordHash = process.env.ADMIN_PASSWORD_HASH;
+  if (username && passwordHash) {
+    return [
+      {
+        username,
+        passwordHash,
+        displayName: process.env.ADMIN_DISPLAY_NAME ?? username,
+        role: "owner",
+        active: true
+      }
+    ];
+  }
+  return [];
+}
+function findAdminByUsername(username) {
+  return getAdminAccounts().find(
+    (a) => a.active && a.username.toLowerCase() === username.toLowerCase()
+  );
+}
+async function verifyPassword(plain, hash) {
+  return bcrypt.compare(plain, hash);
+}
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET ?? "vvlf-admin-secret-change-in-production";
+  return new TextEncoder().encode(`admin:${secret}`);
+}
+async function createAdminSession(username, role) {
+  return new SignJWT2({ username, role, type: "admin_session" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime(`${SESSION_EXPIRY_HOURS}h`).setSubject(`admin:${username}`).sign(getJwtSecret());
+}
+async function verifyAdminSession(token) {
+  try {
+    const { payload } = await jwtVerify2(token, getJwtSecret());
+    if (payload.type === "admin_session" && typeof payload.username === "string" && typeof payload.role === "string") {
+      return { username: payload.username, role: payload.role };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now - entry.windowStart > WINDOW_MS) {
+    rateLimitMap.set(ip, { count: 1, windowStart: now });
+    return { allowed: true, remaining: MAX_ATTEMPTS - 1 };
+  }
+  if (entry.count >= MAX_ATTEMPTS) {
+    return { allowed: false, remaining: 0 };
+  }
+  entry.count += 1;
+  return { allowed: true, remaining: MAX_ATTEMPTS - entry.count };
+}
+function resetRateLimit(ip) {
+  rateLimitMap.delete(ip);
+}
+var AUDIT_LOG_PATH = path4.resolve(process.cwd(), "data/audit_log.json");
+function ensureAuditDir() {
+  const dir = path4.dirname(AUDIT_LOG_PATH);
+  if (!fs4.existsSync(dir)) fs4.mkdirSync(dir, { recursive: true });
+}
+function writeAuditLog(entry) {
+  try {
+    ensureAuditDir();
+    let log = [];
+    if (fs4.existsSync(AUDIT_LOG_PATH)) {
+      try {
+        log = JSON.parse(fs4.readFileSync(AUDIT_LOG_PATH, "utf-8"));
+      } catch {
+      }
+    }
+    const full = {
+      id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      ...entry
+    };
+    log.unshift(full);
+    if (log.length > 2e3) log = log.slice(0, 2e3);
+    fs4.writeFileSync(AUDIT_LOG_PATH, JSON.stringify(log, null, 2), "utf-8");
+  } catch (err) {
+    console.warn("[AuditLog] Could not write:", err);
+  }
+}
+function readAuditLog(limit = 200) {
+  try {
+    if (!fs4.existsSync(AUDIT_LOG_PATH)) return [];
+    const log = JSON.parse(fs4.readFileSync(AUDIT_LOG_PATH, "utf-8"));
+    return log.slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+function getAdminCookieOptions(isProduction) {
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: "strict",
+    path: "/",
+    maxAge: SESSION_EXPIRY_HOURS * 60 * 60 * 1e3
+  };
+}
+
+// server/qualityScore.ts
+var TRACK_CORE_SKILLS = {
+  "Startups & Business": [
+    "Business Development",
+    "Market Research",
+    "Strategy",
+    "Partnerships",
+    "Excel / Sheets",
+    "PowerPoint / Slides",
+    "Market Research & Analysis",
+    "Research & Synthesis",
+    "Strategic Thinking"
+  ],
+  "Technology & Product": [
+    "React",
+    "TypeScript",
+    "Python",
+    "Node.js",
+    "API Integration",
+    "Git/GitHub",
+    "AI / LLMs",
+    "Product Thinking",
+    "Web / Coding",
+    "Full-Stack Dev",
+    "Mobile Dev",
+    "Dev Tooling"
+  ],
+  "Creative & Media": [
+    "Video Editing",
+    "Motion Graphics",
+    "After Effects",
+    "Premiere Pro",
+    "Photography",
+    "3D / Blender",
+    "Illustration",
+    "Graphic Design",
+    "Figma (App/Web UI)",
+    "Canva",
+    "AI Image Tools"
+  ],
+  "Content & Community": [
+    "Copywriting",
+    "Content Writing",
+    "Short-form Video (Reels/TikTok)",
+    "Community Management",
+    "Email Campaigns",
+    "Social Media Strategy",
+    "Newsletter/Blog",
+    "Storytelling"
+  ],
+  "Explore & Build": [
+    "Curious, ready to learn",
+    "Prompt Engineering",
+    "Research & Synthesis",
+    "Strategic Thinking",
+    "Business Development"
+  ]
+};
+var HIGH_VALUE_SKILLS = /* @__PURE__ */ new Set([
+  "React",
+  "TypeScript",
+  "Python",
+  "Node.js",
+  "AI / LLMs",
+  "Motion Graphics",
+  "After Effects",
+  "Figma (App/Web UI)",
+  "Video Editing",
+  "Full-Stack Dev",
+  "Product Thinking",
+  "Market Research & Analysis",
+  "Strategic Thinking",
+  "Short-form Video (Reels/TikTok)",
+  "3D / Blender"
+]);
+function scoreInterestFit(track, skills, workAreas) {
+  const coreSkills = TRACK_CORE_SKILLS[track] ?? [];
+  if (coreSkills.length === 0) return 10;
+  const matchCount = skills.filter(
+    (s) => coreSkills.some((c) => c.toLowerCase() === s.toLowerCase())
+  ).length;
+  const workAreaMatch = workAreas.some(
+    (w) => coreSkills.some((c) => c.toLowerCase().includes(w.toLowerCase().slice(0, 6)))
+  );
+  const baseRatio = Math.min(matchCount / Math.max(coreSkills.length * 0.3, 1), 1);
+  return Math.round(baseRatio * 16 + (workAreaMatch ? 4 : 0));
+}
+function scoreSkillDepth(skills) {
+  if (skills.length === 0) return 0;
+  const count = Math.min(skills.length, 10);
+  const highValueCount = skills.filter((s) => HIGH_VALUE_SKILLS.has(s)).length;
+  const countScore = Math.min(count, 8);
+  const hvScore = Math.min(highValueCount * 2, 12);
+  const diversityBonus = Math.min(Math.floor(count / 3), 5);
+  return Math.min(countScore + hvScore + diversityBonus, 25);
+}
+function scoreProofOfWork(portfolioLink, noWorkToShare) {
+  if (noWorkToShare) return 5;
+  if (!portfolioLink) return 0;
+  const link = portfolioLink.trim().toLowerCase();
+  if (link === "" || link === "n/a" || link === "na" || link === "none") return 2;
+  if (link.includes("github.com")) return 25;
+  if (link.includes("behance.net")) return 23;
+  if (link.includes("dribbble.com")) return 23;
+  if (link.includes("figma.com")) return 22;
+  if (link.includes("youtube.com") || link.includes("youtu.be")) return 20;
+  if (link.includes("linkedin.com")) return 15;
+  if (link.startsWith("http")) return 18;
+  return 8;
+}
+function scoreAvailability(availabilityHours) {
+  if (!availabilityHours) return 5;
+  const h = availabilityHours.toLowerCase();
+  if (h.includes("20") || h.includes("20+")) return 15;
+  if (h.includes("12") || h.includes("12-20")) return 13;
+  if (h.includes("8") || h.includes("8-12")) return 11;
+  if (h.includes("5") || h.includes("5-8")) return 7;
+  return 5;
+}
+function scoreStudyYear(studyYear) {
+  if (!studyYear) return 8;
+  const y = studyYear.toLowerCase();
+  if (y.includes("3rd") || y.includes("4th") || y.includes("final")) return 15;
+  if (y.includes("2nd")) return 13;
+  if (y.includes("1st")) return 10;
+  return 8;
+}
+function parseToolsField(rawTools) {
+  try {
+    const parsed = JSON.parse(rawTools);
+    if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+      return {
+        skills: Array.isArray(parsed.skills) ? parsed.skills : [],
+        workAreas: Array.isArray(parsed.workAreas) ? parsed.workAreas : [],
+        category: parsed.category ?? "",
+        secondaryCategory: parsed.secondaryCategory ?? "",
+        availabilityHours: parsed.availabilityHours ?? "",
+        noWorkToShare: Boolean(parsed.noWorkToShare)
+      };
+    }
+    if (Array.isArray(parsed)) {
+      return {
+        skills: parsed,
+        workAreas: [],
+        category: "",
+        secondaryCategory: "",
+        availabilityHours: "",
+        noWorkToShare: false
+      };
+    }
+  } catch {
+  }
+  return { skills: [], workAreas: [], category: "", secondaryCategory: "", availabilityHours: "", noWorkToShare: false };
+}
+function computeQualityScore(app2) {
+  const parsed = parseToolsField(app2.tools);
+  const interestFit = scoreInterestFit(app2.track, parsed.skills, parsed.workAreas);
+  const skillDepth = scoreSkillDepth(parsed.skills);
+  const proofOfWork = scoreProofOfWork(app2.portfolioLink, parsed.noWorkToShare);
+  const availability = scoreAvailability(parsed.availabilityHours);
+  const studyYear = scoreStudyYear(app2.studyYear);
+  const total = Math.min(interestFit + skillDepth + proofOfWork + availability + studyYear, 100);
+  let tier;
+  if (total >= 90) tier = "exceptional";
+  else if (total >= 80) tier = "strong";
+  else if (total >= 70) tier = "potential";
+  else if (total >= 60) tier = "review";
+  else tier = "low";
+  return { interestFit, skillDepth, proofOfWork, availability, studyYear, total, tier };
+}
+
+// server/analytics.ts
+function getSource(app2) {
+  if (app2.source && app2.source.trim()) return app2.source.trim();
+  return "Direct";
+}
+function enrichApplications(apps, metaMap) {
+  return apps.map((app2) => {
+    const parsed = parseToolsField(app2.tools);
+    const score = computeQualityScore(app2);
+    const meta = metaMap.get(app2.id);
+    return {
+      ...app2,
+      score: meta?.scoreOverride ?? score.total,
+      tier: score.tier,
+      scoreBreakdown: {
+        interestFit: score.interestFit,
+        skillDepth: score.skillDepth,
+        proofOfWork: score.proofOfWork,
+        availability: score.availability,
+        studyYear: score.studyYear
+      },
+      skills: parsed.skills,
+      workAreas: parsed.workAreas,
+      secondaryCategory: parsed.secondaryCategory,
+      availabilityHours: parsed.availabilityHours,
+      recommendedRole: parsed.category ? suggestRole(parsed.category, parsed.skills) : void 0,
+      status: meta?.status ?? "new",
+      notes: meta?.notes ?? ""
+    };
+  });
+}
+function getOverviewStats(apps, targetApplication = 500, targetSelection = 100) {
+  const total = apps.length;
+  const strong = apps.filter((a) => a.score >= 80).length;
+  const exceptional = apps.filter((a) => a.score >= 90).length;
+  const avgScore = total > 0 ? Math.round(apps.reduce((s, a) => s + a.score, 0) / total) : 0;
+  const selected = apps.filter((a) => a.status === "selected").length;
+  const unreviewedHP = apps.filter(
+    (a) => a.score >= 80 && (a.status === "new" || a.status === "screening")
+  ).length;
+  const trackCounts = /* @__PURE__ */ new Map();
+  for (const a of apps) {
+    trackCounts.set(a.track, (trackCounts.get(a.track) ?? 0) + 1);
+  }
+  let topTrack = "";
+  let topTrackCount = 0;
+  for (const [track, count] of trackCounts) {
+    if (count > topTrackCount) {
+      topTrack = track;
+      topTrackCount = count;
+    }
+  }
+  return {
+    totalApplications: total,
+    completionRate: Math.round(total / Math.max(total * 1.33, 1) * 100),
+    // estimated
+    strongCandidates: strong,
+    exceptionalCandidates: exceptional,
+    avgScore,
+    targetApplication,
+    targetSelection,
+    selectedCount: selected,
+    unreviewedHighPotential: unreviewedHP,
+    incompleteCount: 0,
+    topTrack,
+    topTrackCount
+  };
+}
+function getTrendData(apps, days = 14) {
+  const now = /* @__PURE__ */ new Date();
+  const points = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const count = apps.filter((a) => {
+      const appDate = new Date(a.createdAt).toISOString().slice(0, 10);
+      return appDate === dateStr;
+    }).length;
+    const label = d.toLocaleDateString("en-GB", { month: "short", day: "numeric" });
+    points.push({ date: dateStr, count, label });
+  }
+  return points;
+}
+function getTrackDistribution(apps) {
+  const total = apps.length || 1;
+  const map = /* @__PURE__ */ new Map();
+  for (const a of apps) {
+    const list = map.get(a.track) ?? [];
+    list.push(a);
+    map.set(a.track, list);
+  }
+  const result = [];
+  for (const [track, list] of map) {
+    const strong = list.filter((a) => a.score >= 80).length;
+    const avg = Math.round(list.reduce((s, a) => s + a.score, 0) / list.length);
+    result.push({
+      track,
+      count: list.length,
+      pct: Math.round(list.length / total * 100),
+      strongCount: strong,
+      strongRate: Math.round(strong / list.length * 100),
+      avgScore: avg
+    });
+  }
+  return result.sort((a, b) => b.count - a.count);
+}
+function getSourceBreakdown(apps) {
+  const total = apps.length || 1;
+  const map = /* @__PURE__ */ new Map();
+  for (const a of apps) {
+    const src = getSource(a);
+    const list = map.get(src) ?? [];
+    list.push(a);
+    map.set(src, list);
+  }
+  const result = [];
+  for (const [source, list] of map) {
+    const strong = list.filter((a) => a.score >= 80).length;
+    const avg = Math.round(list.reduce((s, a) => s + a.score, 0) / list.length);
+    result.push({
+      source,
+      count: list.length,
+      pct: Math.round(list.length / total * 100),
+      strongCount: strong,
+      strongRate: list.length > 0 ? Math.round(strong / list.length * 100) : 0,
+      avgScore: avg
+    });
+  }
+  return result.sort((a, b) => b.count - a.count);
+}
+function getSkillFrequency(apps) {
+  const total = apps.length || 1;
+  const skillMap = /* @__PURE__ */ new Map();
+  for (const a of apps) {
+    for (const skill of a.skills) {
+      if (!skill.trim()) continue;
+      const entry = skillMap.get(skill) ?? { count: 0, tracks: /* @__PURE__ */ new Set() };
+      entry.count++;
+      entry.tracks.add(a.track);
+      skillMap.set(skill, entry);
+    }
+  }
+  const result = [];
+  for (const [skill, { count, tracks }] of skillMap) {
+    result.push({
+      skill,
+      count,
+      pct: Math.round(count / total * 100),
+      tracks: Array.from(tracks)
+    });
+  }
+  return result.sort((a, b) => b.count - a.count);
+}
+function getYearDistribution(apps) {
+  const total = apps.length || 1;
+  const map = /* @__PURE__ */ new Map();
+  for (const a of apps) {
+    const y = a.studyYear || "Unknown";
+    map.set(y, (map.get(y) ?? 0) + 1);
+  }
+  return Array.from(map).map(([label, count]) => ({ label, count, pct: Math.round(count / total * 100) })).sort((a, b) => b.count - a.count);
+}
+function getBranchDistribution(apps) {
+  const total = apps.length || 1;
+  const map = /* @__PURE__ */ new Map();
+  for (const a of apps) {
+    const dept = a.department || "Unknown";
+    const short = dept.length > 30 ? dept.slice(0, 30) + "\u2026" : dept;
+    map.set(short, (map.get(short) ?? 0) + 1);
+  }
+  return Array.from(map).map(([label, count]) => ({ label, count, pct: Math.round(count / total * 100) })).sort((a, b) => b.count - a.count).slice(0, 10);
+}
+function getFunnelData(apps) {
+  const submitted = apps.length;
+  const step2 = Math.round(submitted / 0.93);
+  const step1 = Math.round(step2 / 0.9);
+  const started = Math.round(step1 / 0.88);
+  const visits = Math.round(started / 0.78);
+  const stages = [
+    { stage: "Page Visits", count: visits, estimated: true },
+    { stage: "Started Application", count: started, estimated: true },
+    { stage: "Chose Track & Skills", count: step1, estimated: true },
+    { stage: "Completed About You", count: step2, estimated: true },
+    { stage: "Submitted", count: submitted, estimated: false }
+  ];
+  return stages.map((s, i) => {
+    const prev = i > 0 ? stages[i - 1].count : null;
+    const conversionFromPrev = prev ? Math.round(s.count / prev * 100) : null;
+    const dropOff = prev ? prev - s.count : null;
+    return {
+      stage: s.stage,
+      count: s.count,
+      conversionFromPrev,
+      dropOff,
+      isEstimated: s.estimated
+    };
+  });
+}
+function getScoreDistribution(apps) {
+  const bins = [
+    { range: "90-100", min: 90, max: 100 },
+    { range: "80-89", min: 80, max: 89 },
+    { range: "70-79", min: 70, max: 79 },
+    { range: "60-69", min: 60, max: 69 },
+    { range: "< 60", min: 0, max: 59 }
+  ];
+  return bins.map((b) => ({
+    range: b.range,
+    count: apps.filter((a) => a.score >= b.min && a.score <= b.max).length
+  }));
+}
+function getTopCandidates(apps, limit = 100) {
+  return [...apps].sort((a, b) => b.score - a.score).slice(0, limit);
+}
+function getInterestCombos(apps) {
+  const map = /* @__PURE__ */ new Map();
+  for (const a of apps) {
+    if (a.track && a.secondaryCategory && a.track !== a.secondaryCategory) {
+      const key = `${a.track}|${a.secondaryCategory}`;
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+  }
+  return Array.from(map).map(([key, count]) => {
+    const [primary, secondary] = key.split("|");
+    return { primary, secondary, count };
+  }).sort((a, b) => b.count - a.count).slice(0, 10);
+}
+function suggestRole(track, skills) {
+  const skillSet = new Set(skills.map((s) => s.toLowerCase()));
+  if (track === "Technology & Product") {
+    if (skillSet.has("ai / llms") || skillSet.has("python")) return "AI & Automation Engineering";
+    if (skillSet.has("react") || skillSet.has("full-stack dev")) return "Digital Product & Full-Stack";
+    if (skillSet.has("figma (app/web ui)")) return "Product Design";
+    return "Technology";
+  }
+  if (track === "Creative & Media") {
+    if (skillSet.has("motion graphics") || skillSet.has("after effects")) return "Video, Motion & Post-Production";
+    if (skillSet.has("3d / blender")) return "3D & Visual Production";
+    if (skillSet.has("photography")) return "Photography & Visual";
+    return "Creative Production";
+  }
+  if (track === "Content & Community") {
+    if (skillSet.has("short-form video (reels/tiktok)")) return "Social Media & Reels";
+    if (skillSet.has("copywriting") || skillSet.has("content writing")) return "Content & Copywriting";
+    return "Community & Growth";
+  }
+  if (track === "Startups & Business") {
+    if (skillSet.has("market research & analysis")) return "Venture Intelligence & Research";
+    if (skillSet.has("business development")) return "Business Development";
+    return "Strategy & Operations";
+  }
+  return "General";
+}
+
+// server/candidateMeta.ts
+import fs5 from "fs";
+import path5 from "path";
+var META_PATH = path5.resolve(process.cwd(), "data/candidate_meta.json");
+var CANDIDATE_STATUS_LABELS = {
+  new: "New",
+  screening: "Screening",
+  shortlisted: "Shortlisted",
+  challenge_sent: "Challenge Sent",
+  challenge_done: "Challenge Done",
+  interview: "Interview",
+  selected: "Selected",
+  waitlisted: "Waitlisted",
+  rejected: "Rejected",
+  withdrawn: "Withdrawn"
+};
+var inMemoryMeta = /* @__PURE__ */ new Map();
+var useMemory = false;
+function ensureDir() {
+  const dir = path5.dirname(META_PATH);
+  if (!fs5.existsSync(dir)) fs5.mkdirSync(dir, { recursive: true });
+}
+function readAllMeta() {
+  if (useMemory) return inMemoryMeta;
+  try {
+    ensureDir();
+    if (!fs5.existsSync(META_PATH)) return /* @__PURE__ */ new Map();
+    const raw = fs5.readFileSync(META_PATH, "utf-8");
+    const arr = JSON.parse(raw);
+    return new Map(arr.map((m) => [m.id, m]));
+  } catch {
+    return /* @__PURE__ */ new Map();
+  }
+}
+function writeAllMeta(map) {
+  if (useMemory) {
+    inMemoryMeta = map;
+    return;
+  }
+  try {
+    ensureDir();
+    fs5.writeFileSync(META_PATH, JSON.stringify(Array.from(map.values()), null, 2), "utf-8");
+  } catch {
+    console.warn("[CandidateMeta] Filesystem is read-only, falling back to memory");
+    useMemory = true;
+    inMemoryMeta = map;
+  }
+}
+function getAllCandidateMeta() {
+  return readAllMeta();
+}
+function setCandidateMeta(id, updates, updatedBy) {
+  const all = readAllMeta();
+  const existing = all.get(id) ?? {
+    id,
+    status: "new",
+    notes: "",
+    updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  const updated = {
+    ...existing,
+    ...updates,
+    id,
+    updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    updatedBy: updatedBy ?? existing.updatedBy
+  };
+  all.set(id, updated);
+  writeAllMeta(all);
+  return updated;
+}
+
 // server/routers.ts
+import { parse as parseCookieHeader3 } from "cookie";
+async function requireAdminSession(req) {
+  const cookies = parseCookieHeader3(req.headers.cookie ?? "");
+  const token = cookies[ADMIN_COOKIE_NAME];
+  if (!token) throw new TRPCError3({ code: "UNAUTHORIZED", message: "Admin session required" });
+  const session = await verifyAdminSession(token);
+  if (!session) throw new TRPCError3({ code: "UNAUTHORIZED", message: "Session expired. Please log in again." });
+  return session;
+}
 function publicQuestion(question) {
   let options = [];
   try {
@@ -1297,21 +1943,185 @@ function publicQuestion(question) {
   } catch {
     options = [];
   }
-  return { id: question.id, kind: question.kind, label: question.label, helpText: question.helpText || "", options, required: question.required, position: question.position };
+  return {
+    id: question.id,
+    kind: question.kind,
+    label: question.label,
+    helpText: question.helpText || "",
+    options,
+    required: question.required,
+    position: question.position
+  };
 }
 var appRouter = router({
-  // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
+  // -------------------------------------------------------------------------
+  // Existing auth (OAuth / session)
+  // -------------------------------------------------------------------------
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true
-      };
+      return { success: true };
     })
   }),
+  // -------------------------------------------------------------------------
+  // Admin authentication (username + password, separate from OAuth)
+  // -------------------------------------------------------------------------
+  admin: router({
+    login: publicProcedure.input(z4.object({ username: z4.string().min(1).max(80), password: z4.string().min(1).max(200) })).mutation(async ({ input, ctx }) => {
+      const ip = ctx.req.headers["x-forwarded-for"] ?? ctx.req.socket?.remoteAddress ?? "unknown";
+      const rateCheck = checkRateLimit(ip);
+      if (!rateCheck.allowed) {
+        writeAuditLog({ adminUsername: input.username, action: "login_rate_limited", ip });
+        throw new TRPCError3({
+          code: "TOO_MANY_REQUESTS",
+          message: "Too many login attempts. Please wait 15 minutes before trying again."
+        });
+      }
+      const account = findAdminByUsername(input.username);
+      if (!account) {
+        writeAuditLog({ adminUsername: input.username, action: "login_failed_user_not_found", ip });
+        throw new TRPCError3({ code: "UNAUTHORIZED", message: "Invalid username or password." });
+      }
+      const passwordOk = await verifyPassword(input.password, account.passwordHash);
+      if (!passwordOk) {
+        writeAuditLog({ adminUsername: input.username, action: "login_failed_wrong_password", ip });
+        throw new TRPCError3({ code: "UNAUTHORIZED", message: "Invalid username or password." });
+      }
+      resetRateLimit(ip);
+      const token = await createAdminSession(account.username, account.role);
+      const cookieOptions = getAdminCookieOptions(ENV.isProduction);
+      ctx.res.cookie(ADMIN_COOKIE_NAME, token, cookieOptions);
+      writeAuditLog({ adminUsername: account.username, action: "login_success", ip });
+      return { success: true, username: account.username, displayName: account.displayName, role: account.role };
+    }),
+    logout: publicProcedure.mutation(async ({ ctx }) => {
+      const session = await verifyAdminSession(
+        parseCookieHeader3(ctx.req.headers.cookie ?? "")[ADMIN_COOKIE_NAME] ?? ""
+      ).catch(() => null);
+      ctx.res.clearCookie(ADMIN_COOKIE_NAME, { path: "/" });
+      if (session) writeAuditLog({ adminUsername: session.username, action: "logout" });
+      return { success: true };
+    }),
+    me: publicProcedure.query(async ({ ctx }) => {
+      const token = parseCookieHeader3(ctx.req.headers.cookie ?? "")[ADMIN_COOKIE_NAME];
+      if (!token) return null;
+      const session = await verifyAdminSession(token).catch(() => null);
+      if (!session) return null;
+      const account = findAdminByUsername(session.username);
+      if (!account) return null;
+      return { username: account.username, displayName: account.displayName, role: account.role };
+    }),
+    // -----------------------------------------------------------------------
+    // Applicant list with enrichment
+    // -----------------------------------------------------------------------
+    listApplications: publicProcedure.query(async ({ ctx }) => {
+      await requireAdminSession(ctx.req);
+      const raw = await listApplications();
+      const metaMap = getAllCandidateMeta();
+      return enrichApplications(raw, metaMap);
+    }),
+    // -----------------------------------------------------------------------
+    // Overview stats
+    // -----------------------------------------------------------------------
+    overviewStats: publicProcedure.query(async ({ ctx }) => {
+      await requireAdminSession(ctx.req);
+      const raw = await listApplications();
+      const metaMap = getAllCandidateMeta();
+      const enriched = enrichApplications(raw, metaMap);
+      return getOverviewStats(enriched);
+    }),
+    // -----------------------------------------------------------------------
+    // Analytics data
+    // -----------------------------------------------------------------------
+    analyticsData: publicProcedure.query(async ({ ctx }) => {
+      await requireAdminSession(ctx.req);
+      const raw = await listApplications();
+      const metaMap = getAllCandidateMeta();
+      const enriched = enrichApplications(raw, metaMap);
+      return {
+        trend: getTrendData(raw),
+        trackDistribution: getTrackDistribution(enriched),
+        sourceBreakdown: getSourceBreakdown(enriched),
+        skillFrequency: getSkillFrequency(enriched),
+        yearDistribution: getYearDistribution(raw),
+        branchDistribution: getBranchDistribution(raw),
+        funnel: getFunnelData(raw),
+        scoreDistribution: getScoreDistribution(enriched),
+        topCandidates: getTopCandidates(enriched, 50),
+        interestCombos: getInterestCombos(enriched),
+        overviewStats: getOverviewStats(enriched)
+      };
+    }),
+    // -----------------------------------------------------------------------
+    // Update candidate status / notes
+    // -----------------------------------------------------------------------
+    updateCandidate: publicProcedure.input(z4.object({
+      id: z4.number().int().positive(),
+      status: z4.enum([
+        "new",
+        "screening",
+        "shortlisted",
+        "challenge_sent",
+        "challenge_done",
+        "interview",
+        "selected",
+        "waitlisted",
+        "rejected",
+        "withdrawn"
+      ]).optional(),
+      notes: z4.string().max(2e3).optional(),
+      scoreOverride: z4.number().min(0).max(100).optional()
+    })).mutation(async ({ input, ctx }) => {
+      const session = await requireAdminSession(ctx.req);
+      const meta = setCandidateMeta(input.id, {
+        ...input.status ? { status: input.status } : {},
+        ...input.notes !== void 0 ? { notes: input.notes } : {},
+        ...input.scoreOverride !== void 0 ? { scoreOverride: input.scoreOverride } : {}
+      }, session.username);
+      writeAuditLog({
+        adminUsername: session.username,
+        action: "update_candidate",
+        target: `candidate #${input.id}`,
+        metadata: { status: input.status, hasNotes: Boolean(input.notes) }
+      });
+      return { success: true, meta };
+    }),
+    // -----------------------------------------------------------------------
+    // Audit log
+    // -----------------------------------------------------------------------
+    auditLog: publicProcedure.input(z4.object({ limit: z4.number().int().positive().max(500).default(100) })).query(async ({ input, ctx }) => {
+      const session = await requireAdminSession(ctx.req);
+      if (session.role === "reviewer") {
+        throw new TRPCError3({ code: "FORBIDDEN", message: "Reviewers cannot access the audit log." });
+      }
+      return readAuditLog(input.limit);
+    }),
+    // -----------------------------------------------------------------------
+    // Admin accounts list (owners only)
+    // -----------------------------------------------------------------------
+    listAdminAccounts: publicProcedure.query(async ({ ctx }) => {
+      const session = await requireAdminSession(ctx.req);
+      if (session.role !== "owner") {
+        throw new TRPCError3({ code: "FORBIDDEN", message: "Only owners can view admin accounts." });
+      }
+      return getAdminAccounts().map((a) => ({
+        username: a.username,
+        displayName: a.displayName,
+        role: a.role,
+        active: a.active
+      }));
+    }),
+    statusLabels: publicProcedure.query(async ({ ctx }) => {
+      await requireAdminSession(ctx.req);
+      return CANDIDATE_STATUS_LABELS;
+    })
+  }),
+  // -------------------------------------------------------------------------
+  // Existing application routes
+  // -------------------------------------------------------------------------
   application: router({
     submit: publicProcedure.input(applicationInputSchema).mutation(async ({ input }) => {
       try {
@@ -1330,13 +2140,17 @@ var appRouter = router({
             workAreas: enriched.workAreas,
             skills: enriched.skills,
             recommendedRole: enriched.recommendedRole,
-            learningInterest: enriched.learningInterest
+            learningInterest: enriched.learningInterest,
+            availabilityHours: enriched.availabilityHours,
+            availabilityDuration: enriched.availabilityDuration,
+            noWorkToShare: enriched.noWorkToShare
           }),
           focus: enriched.focus,
           portfolioLink: enriched.portfolioLink,
           goal: enriched.goal,
           workstation: enriched.workstation,
-          consent: enriched.consent
+          consent: enriched.consent,
+          source: enriched.source
         });
         try {
           await syncAllSheets({
@@ -1397,6 +2211,9 @@ var appRouter = router({
       }
     })
   }),
+  // -------------------------------------------------------------------------
+  // Existing studio routes
+  // -------------------------------------------------------------------------
   studio: router({
     list: protectedProcedure.query(async ({ ctx }) => listOwnedStudioForms(ctx.user.id)),
     get: protectedProcedure.input(z4.object({ formId: z4.number().int().positive() })).query(async ({ ctx, input }) => {
