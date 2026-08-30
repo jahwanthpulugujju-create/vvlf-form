@@ -410,6 +410,14 @@ export default function Home() {
     const errors: Record<string, string> = {};
 
     if (stepNumber === 0) {
+      // Step 0: 5 Opportunities & Skills
+      const catErr = validateField("category", form.category);
+      if (catErr) errors.category = catErr;
+
+      const skillsErr = validateField("skills", form.skills);
+      if (skillsErr) errors.skills = skillsErr;
+    } else if (stepNumber === 1) {
+      // Step 1: About You
       const nameErr = validateField("fullName", form.fullName);
       if (nameErr) errors.fullName = nameErr;
 
@@ -427,13 +435,8 @@ export default function Home() {
 
       const emailErr = validateField("email", form.email);
       if (emailErr) errors.email = emailErr;
-    } else if (stepNumber === 1) {
-      const catErr = validateField("category", form.category);
-      if (catErr) errors.category = catErr;
-
-      const skillsErr = validateField("skills", form.skills);
-      if (skillsErr) errors.skills = skillsErr;
     } else if (stepNumber === 2) {
+      // Step 2: Final Check & Proof of Work
       const contribErr = validateField("contribution", form.contribution);
       if (contribErr) errors.contribution = contribErr;
 
@@ -460,6 +463,7 @@ export default function Home() {
 
   const prevStep = () => {
     setError("");
+    setFieldErrors({});
     setStep((curr) => Math.max(curr - 1, 0));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -584,7 +588,7 @@ export default function Home() {
     );
   }
 
-  const stageTitles = ["About You", "Your Interests & Skills", "Proof of Work & Availability"];
+  const stageTitles = ["5 Opportunities", "About You", "Final Check"];
 
   return (
     <main
@@ -679,19 +683,19 @@ export default function Home() {
               <div className="canvas-header-title-block">
                 <span className="canvas-overline">VVLF STUDENT BUILDER PROGRAM</span>
                 <div className="canvas-progress-badge">
-                  {step === 0 && "1 of 3 — Quick 20s start"}
-                  {step === 1 && "2 of 3 — Almost there"}
+                  {step === 0 && "1 of 3 — Pick your track"}
+                  {step === 1 && "2 of 3 — Quick 20s details"}
                   {step === 2 && "3 of 3 — Final check"}
                 </div>
               </div>
 
               <nav className="header-steps-nav" aria-label="Application progress">
                 <span className={`step-crumb ${step === 0 ? "current" : step > 0 ? "done" : ""}`}>
-                  About You {step > 0 ? "✓" : "●"}
+                  5 Opportunities {step > 0 ? "✓" : "●"}
                 </span>
                 <span className="step-crumb-sep">›</span>
                 <span className={`step-crumb ${step === 1 ? "current" : step > 1 ? "done" : ""}`}>
-                  Your Interests {step > 1 ? "✓" : step === 1 ? "●" : "○"}
+                  About You {step > 1 ? "✓" : step === 1 ? "●" : "○"}
                 </span>
                 <span className="step-crumb-sep">›</span>
                 <span className={`step-crumb ${step === 2 ? "current" : ""}`}>
@@ -706,13 +710,13 @@ export default function Home() {
           </header>
 
           <div className="form-inner">
-            {/* STEP 1: Quick Personal Information */}
+            {/* STEP 1 (Step 0): 5 Opportunities & Skills (Direct Conversion Landing) */}
             {step === 0 && (
               <section className="step-panel panel-enter">
-                <p className="eyebrow">01 / About You</p>
-                <h2>Let's get to know you.</h2>
+                <p className="eyebrow">01 / Choose Your Track</p>
+                <h2>Find your place at VVLF.</h2>
                 <p className="step-intro">
-                  Just the basics. This takes about 20 seconds.
+                  Pick what you're curious about. You do not need prior experience or a startup idea to join.
                 </p>
 
                 <div className="no-startup-idea-hero-banner">
@@ -723,162 +727,6 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
-
-                <div className="field-grid">
-                  <label>
-                    Full Name *
-                    <input
-                      className={fieldErrors.fullName ? "input-invalid" : ""}
-                      value={form.fullName}
-                      onChange={(e) => {
-                        update("fullName", e.target.value);
-                        if (fieldErrors.fullName) {
-                          setFieldErrors((prev) => ({
-                            ...prev,
-                            fullName: validateField("fullName", e.target.value),
-                          }));
-                        }
-                      }}
-                      placeholder="e.g. Rahul Sharma"
-                    />
-                    {fieldErrors.fullName && (
-                      <span className="field-error-text">{fieldErrors.fullName}</span>
-                    )}
-                  </label>
-
-                  <label>
-                    College / University *
-                    <input
-                      className={fieldErrors.college ? "input-invalid" : ""}
-                      value={form.college}
-                      onChange={(e) => {
-                        update("college", e.target.value);
-                        if (fieldErrors.college) {
-                          setFieldErrors((prev) => ({
-                            ...prev,
-                            college: validateField("college", e.target.value),
-                          }));
-                        }
-                      }}
-                      placeholder="e.g. BVRIT, SVECW, VIT, CBIT, JNTU..."
-                    />
-                    {fieldErrors.college && (
-                      <span className="field-error-text">{fieldErrors.college}</span>
-                    )}
-                  </label>
-
-                  <label>
-                    Department / Branch *
-                    <input
-                      className={fieldErrors.department ? "input-invalid" : ""}
-                      value={form.department}
-                      onChange={(e) => {
-                        update("department", e.target.value);
-                        if (fieldErrors.department) {
-                          setFieldErrors((prev) => ({
-                            ...prev,
-                            department: validateField("department", e.target.value),
-                          }));
-                        }
-                      }}
-                      placeholder="e.g. CSE, ECE, IT, AIDS, Mechanical..."
-                    />
-                    {fieldErrors.department && (
-                      <span className="field-error-text">{fieldErrors.department}</span>
-                    )}
-                  </label>
-
-                  <label>
-                    Year of Study *
-                    <select
-                      className={fieldErrors.studyYear ? "input-invalid" : ""}
-                      value={form.studyYear}
-                      onChange={(e) => {
-                        update("studyYear", e.target.value as any);
-                        if (fieldErrors.studyYear) {
-                          setFieldErrors((prev) => ({
-                            ...prev,
-                            studyYear: validateField("studyYear", e.target.value),
-                          }));
-                        }
-                      }}
-                    >
-                      {STUDY_YEARS.map((yr) => (
-                        <option key={yr} value={yr}>
-                          {yr}
-                        </option>
-                      ))}
-                    </select>
-                    {fieldErrors.studyYear && (
-                      <span className="field-error-text">{fieldErrors.studyYear}</span>
-                    )}
-                  </label>
-
-                  <label>
-                    WhatsApp Number *
-                    <input
-                      className={fieldErrors.whatsapp ? "input-invalid" : ""}
-                      value={form.whatsapp}
-                      maxLength={10}
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      onChange={(e) => {
-                        const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
-                        update("whatsapp", digits);
-                        if (fieldErrors.whatsapp) {
-                          setFieldErrors((prev) => ({
-                            ...prev,
-                            whatsapp: validateField("whatsapp", digits),
-                          }));
-                        }
-                      }}
-                      placeholder="10-digit mobile number"
-                    />
-                    <div className="field-hint-text">
-                      {fieldErrors.whatsapp ? (
-                        <span className="field-error-text" style={{ margin: 0 }}>
-                          {fieldErrors.whatsapp}
-                        </span>
-                      ) : (
-                        <span>For direct updates &amp; invitations</span>
-                      )}
-                      <span>{form.whatsapp.length}/10</span>
-                    </div>
-                  </label>
-
-                  <label>
-                    Email Address *
-                    <input
-                      className={fieldErrors.email ? "input-invalid" : ""}
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => {
-                        update("email", e.target.value);
-                        if (fieldErrors.email) {
-                          setFieldErrors((prev) => ({
-                            ...prev,
-                            email: validateField("email", e.target.value),
-                          }));
-                        }
-                      }}
-                      placeholder="you@example.com"
-                    />
-                    {fieldErrors.email && (
-                      <span className="field-error-text">{fieldErrors.email}</span>
-                    )}
-                  </label>
-                </div>
-              </section>
-            )}
-
-            {/* STEP 2: Choose What Interests You */}
-            {step === 1 && (
-              <section className="step-panel panel-enter">
-                <p className="eyebrow">02 / What do you want to work on?</p>
-                <h2>Choose the area that sounds most interesting.</h2>
-                <p className="step-intro">
-                  Pick what you're curious about. You do not need prior experience to join.
-                </p>
 
                 {/* Optional Quick Search */}
                 <div className="search-pill-container">
@@ -1021,6 +869,146 @@ export default function Home() {
                   <span>
                     <strong>New to this? That's completely okay.</strong> You can apply even if you're still learning. No prior startup experience required.
                   </span>
+                </div>
+              </section>
+            )}
+
+            {/* STEP 2 (Step 1): About You (Fast 20-Second Basics) */}
+            {step === 1 && (
+              <section className="step-panel panel-enter">
+                <p className="eyebrow">02 / About You</p>
+                <h2>Let's get to know you.</h2>
+                <p className="step-intro">
+                  Just the basics. This takes about 20 seconds.
+                </p>
+
+                <div className="field-grid">
+                  <label>
+                    Full Name *
+                    <input
+                      className={fieldErrors.fullName ? "input-invalid" : ""}
+                      value={form.fullName}
+                      onChange={(e) => {
+                        update("fullName", e.target.value);
+                        if (fieldErrors.fullName) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            fullName: validateField("fullName", e.target.value),
+                          }));
+                        }
+                      }}
+                      placeholder="e.g. Rahul Sharma"
+                    />
+                    {fieldErrors.fullName && (
+                      <span className="field-error-text">{fieldErrors.fullName}</span>
+                    )}
+                  </label>
+
+                  <label>
+                    College / University *
+                    <input
+                      className={fieldErrors.college ? "input-invalid" : ""}
+                      value={form.college}
+                      onChange={(e) => {
+                        update("college", e.target.value);
+                        if (fieldErrors.college) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            college: validateField("college", e.target.value),
+                          }));
+                        }
+                      }}
+                      placeholder="e.g. BVRIT, SVECW, VIT, CBIT, JNTU..."
+                    />
+                    {fieldErrors.college && (
+                      <span className="field-error-text">{fieldErrors.college}</span>
+                    )}
+                  </label>
+
+                  <label>
+                    Department / Branch *
+                    <input
+                      className={fieldErrors.department ? "input-invalid" : ""}
+                      value={form.department}
+                      onChange={(e) => {
+                        update("department", e.target.value);
+                        if (fieldErrors.department) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            department: validateField("department", e.target.value),
+                          }));
+                        }
+                      }}
+                      placeholder="e.g. CSE, ECE, IT, AIDS, Mechanical..."
+                    />
+                    {fieldErrors.department && (
+                      <span className="field-error-text">{fieldErrors.department}</span>
+                    )}
+                  </label>
+
+                  <label>
+                    Year of Study *
+                    <select
+                      value={form.studyYear}
+                      onChange={(e) => update("studyYear", e.target.value)}
+                    >
+                      <option value="1st Year">1st Year</option>
+                      <option value="2nd Year">2nd Year</option>
+                      <option value="3rd Year">3rd Year</option>
+                      <option value="4th Year">4th Year</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    WhatsApp Number *
+                    <input
+                      className={fieldErrors.whatsapp ? "input-invalid" : ""}
+                      value={form.whatsapp}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        update("whatsapp", digits);
+                        if (fieldErrors.whatsapp) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            whatsapp: validateField("whatsapp", digits),
+                          }));
+                        }
+                      }}
+                      placeholder="10-digit mobile number"
+                    />
+                    <div className="field-hint-text">
+                      {fieldErrors.whatsapp ? (
+                        <span className="field-error-text" style={{ margin: 0 }}>
+                          {fieldErrors.whatsapp}
+                        </span>
+                      ) : (
+                        <span>For direct updates &amp; invitations</span>
+                      )}
+                      <span>{form.whatsapp.length}/10</span>
+                    </div>
+                  </label>
+
+                  <label>
+                    Email Address *
+                    <input
+                      className={fieldErrors.email ? "input-invalid" : ""}
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => {
+                        update("email", e.target.value);
+                        if (fieldErrors.email) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            email: validateField("email", e.target.value),
+                          }));
+                        }
+                      }}
+                      placeholder="you@example.com"
+                    />
+                    {fieldErrors.email && (
+                      <span className="field-error-text">{fieldErrors.email}</span>
+                    )}
+                  </label>
                 </div>
               </section>
             )}
@@ -1201,8 +1189,8 @@ export default function Home() {
                 <div className="review-card">
                   <div className="review-card-header">
                     <strong>Application Summary</strong>
-                    <button type="button" className="edit-btn" onClick={() => setStep(1)}>
-                      Edit Interests
+                    <button type="button" className="edit-btn" onClick={() => setStep(0)}>
+                      Edit Track
                     </button>
                   </div>
                   <div className="review-row">
@@ -1267,7 +1255,11 @@ export default function Home() {
               <ArrowLeft size={16} /> Back
             </button>
 
-            {step < 2 ? (
+            {step === 0 ? (
+              <button className="primary-action" type="button" onClick={nextStep}>
+                Apply Now <ArrowRight size={16} />
+              </button>
+            ) : step === 1 ? (
               <button className="primary-action" type="button" onClick={nextStep}>
                 Continue <ArrowRight size={16} />
               </button>
