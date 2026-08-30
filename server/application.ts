@@ -75,7 +75,7 @@ export const applicationInputSchema = z.object({
   
   // Motivation & Contribution
   goals: z.array(z.string().trim()).default([]),
-  contribution: z.string().trim().max(300).optional(),
+  contribution: z.string().trim().min(2, "Please tell us what you would like to contribute to VVLF.").max(300),
   
   // Consent
   consent: z.literal(true, { error: "Please confirm the consent statement before submitting." }),

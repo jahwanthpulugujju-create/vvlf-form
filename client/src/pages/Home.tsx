@@ -394,6 +394,10 @@ export default function Home() {
       case "skills":
         if (!Array.isArray(value) || value.length === 0) return "Please select at least one skill or 'I’m still learning'.";
         return "";
+      case "contribution":
+        if (!String(value || "").trim()) return "Please share what you would like to contribute to VVLF.";
+        if (String(value || "").trim().length < 2) return "Please enter at least 2 characters.";
+        return "";
       case "consent":
         if (!value) return "Please confirm the privacy and consent statement.";
         return "";
@@ -430,6 +434,9 @@ export default function Home() {
       const skillsErr = validateField("skills", form.skills);
       if (skillsErr) errors.skills = skillsErr;
     } else if (stepNumber === 2) {
+      const contribErr = validateField("contribution", form.contribution);
+      if (contribErr) errors.contribution = contribErr;
+
       const consentErr = validateField("consent", form.consent);
       if (consentErr) errors.consent = consentErr;
     }
@@ -1114,17 +1121,28 @@ export default function Home() {
                   </div>
                 </fieldset>
 
-                {/* Optional Contribution */}
+                {/* Mandatory Contribution */}
                 <div style={{ marginTop: 24 }}>
                   <label className="custom-label">
-                    What would you like to contribute to VVLF? (Optional · Max 200 chars)
+                    What would you like to contribute to VVLF? * (Max 200 chars)
                     <input
-                      className="custom-textarea"
+                      className={`custom-textarea ${fieldErrors.contribution ? "input-invalid" : ""}`}
                       maxLength={200}
                       value={form.contribution}
-                      onChange={(e) => update("contribution", e.target.value)}
+                      onChange={(e) => {
+                        update("contribution", e.target.value);
+                        if (fieldErrors.contribution) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            contribution: validateField("contribution", e.target.value),
+                          }));
+                        }
+                      }}
                       placeholder="e.g. I can help build frontend UI, edit short videos, or write tech guides..."
                     />
+                    {fieldErrors.contribution && (
+                      <span className="field-error-text">{fieldErrors.contribution}</span>
+                    )}
                     <div className="field-hint-text">
                       <span>Briefly describe your enthusiasm or niche strengths</span>
                       <span>{form.contribution.length}/200</span>

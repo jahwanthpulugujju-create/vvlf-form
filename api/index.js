@@ -956,7 +956,7 @@ var applicationInputSchema = z2.object({
   startTimeline: z2.string().trim().default("Immediately"),
   // Motivation & Contribution
   goals: z2.array(z2.string().trim()).default([]),
-  contribution: z2.string().trim().max(300).optional(),
+  contribution: z2.string().trim().min(2, "Please tell us what you would like to contribute to VVLF.").max(300),
   // Consent
   consent: z2.literal(true, { error: "Please confirm the consent statement before submitting." }),
   // Backward-compatible fields (optional in input, populated if missing)
