@@ -30,8 +30,8 @@ function exportCsv(rows: Record<string, unknown>[]) {
 }
 
 const ALL_TRACKS = [
-  "Technology & Product",
   "Startups & Business",
+  "Technology & Product",
   "Creative & Media",
   "Content & Community",
   "Explore & Build",
@@ -43,6 +43,14 @@ const ALL_YEARS = [
   "3rd Year",
   "4th Year",
 ] as const;
+
+const TRACK_BADGES: Record<string, { bg: string; color: string }> = {
+  "Startups & Business": { bg: "#f5f3ff", color: "#7c3aed" },
+  "Technology & Product": { bg: "#eff6ff", color: "#1d4ed8" },
+  "Creative & Media": { bg: "#fff7ed", color: "#c2410c" },
+  "Content & Community": { bg: "#f0fdf4", color: "#15803d" },
+  "Explore & Build": { bg: "#fefce8", color: "#a16207" },
+};
 
 export default function Applications() {
   const appsQuery = trpc.admin.listApplications.useQuery(undefined, { refetchInterval: 30_000 });
@@ -58,16 +66,8 @@ export default function Applications() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const apps = appsQuery.data ?? [];
-
-  const tracks = useMemo(() => {
-    const list = Array.from(new Set([...ALL_TRACKS, ...apps.map((a) => a.track).filter(Boolean)]));
-    return list;
-  }, [apps]);
-
-  const years = useMemo(() => {
-    const list = Array.from(new Set([...ALL_YEARS, ...apps.map((a) => a.studyYear).filter(Boolean)]));
-    return list;
-  }, [apps]);
+  const tracks = ALL_TRACKS;
+  const years = ALL_YEARS;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -166,38 +166,40 @@ export default function Applications() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((app) => (
-                  <tr
-                    key={app.id}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => setSelectedId(app.id)}
-                  >
-                    <td style={{ color: "#94a3b8", fontSize: 11 }}>{app.id}</td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: "#0f172a", fontSize: 13 }}>{app.fullName}</div>
-                      <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{app.email}</div>
-                    </td>
-                    <td>
-                      <span style={{
-                        display: "inline-block",
-                        padding: "2px 7px",
-                        borderRadius: 5,
-                        background: "#eff6ff",
-                        color: "#1d4ed8",
-                        fontSize: 11,
-                        fontWeight: 600,
-                        whiteSpace: "nowrap",
-                      }}>
-                        {app.track.split(" & ")[0]}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: 12, color: "#475569" }}>{app.studyYear}</td>
-                    <td style={{ fontSize: 12, color: "#475569", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{app.department}</td>
-                    <td>
-                      <span className={`score-badge ${app.tier}`}>
-                        {app.score}
-                      </span>
-                    </td>
+                {filtered.map((app) => {
+                  const badge = TRACK_BADGES[app.track] ?? { bg: "#eff6ff", color: "#1d4ed8" };
+                  return (
+                    <tr
+                      key={app.id}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => setSelectedId(app.id)}
+                    >
+                      <td style={{ color: "#94a3b8", fontSize: 11 }}>{app.id}</td>
+                      <td>
+                        <div style={{ fontWeight: 600, color: "#0f172a", fontSize: 13 }}>{app.fullName}</div>
+                        <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{app.email}</div>
+                      </td>
+                      <td>
+                        <span style={{
+                          display: "inline-block",
+                          padding: "3px 8px",
+                          borderRadius: 6,
+                          background: badge.bg,
+                          color: badge.color,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                        }}>
+                          {app.track}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 12, color: "#475569" }}>{app.studyYear}</td>
+                      <td style={{ fontSize: 12, color: "#475569", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{app.department}</td>
+                      <td>
+                        <span className={`score-badge ${app.tier}`}>
+                          {app.score}
+                        </span>
+                      </td>
                     <td style={{ maxWidth: 200 }}>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
                         {app.skills.slice(0, 3).map((s: string) => (
@@ -215,12 +217,13 @@ export default function Applications() {
                         {app.status.replace("_", " ")}
                       </span>
                     </td>
-                    <td style={{ fontSize: 11, color: "#94a3b8" }}>{app.source ?? "Direct"}</td>
-                    <td style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap" }}>
-                      {new Date(app.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                    </td>
-                  </tr>
-                ))}
+                      <td style={{ fontSize: 11, color: "#94a3b8" }}>{app.source ?? "Direct"}</td>
+                      <td style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap" }}>
+                        {new Date(app.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

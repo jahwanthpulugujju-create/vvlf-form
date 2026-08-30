@@ -1598,6 +1598,17 @@ function computeQualityScore(app2) {
 }
 
 // server/analytics.ts
+function normalizeTrack(raw) {
+  if (!raw) return "Explore & Build";
+  const r = raw.trim();
+  const lower = r.toLowerCase();
+  if (lower.includes("startup") || lower.includes("business")) return "Startups & Business";
+  if (lower.includes("tech") || lower.includes("web") || lower.includes("product") || lower.includes("code")) return "Technology & Product";
+  if (lower.includes("creative") || lower.includes("media") || lower.includes("design") || lower.includes("visual") || lower.includes("video")) return "Creative & Media";
+  if (lower.includes("content") || lower.includes("community") || lower.includes("social") || lower.includes("writing")) return "Content & Community";
+  if (lower.includes("explore") || lower.includes("build") || lower.includes("learn")) return "Explore & Build";
+  return "Explore & Build";
+}
 function getSource(app2) {
   if (app2.source && app2.source.trim()) return app2.source.trim();
   return "Direct";
@@ -1607,8 +1618,10 @@ function enrichApplications(apps, metaMap) {
     const parsed = parseToolsField(app2.tools);
     const score = computeQualityScore(app2);
     const meta = metaMap.get(app2.id);
+    const canonicalTrack = normalizeTrack(app2.track || parsed.category);
     return {
       ...app2,
+      track: canonicalTrack,
       score: meta?.scoreOverride ?? score.total,
       tier: score.tier,
       scoreBreakdown: {
@@ -1622,7 +1635,7 @@ function enrichApplications(apps, metaMap) {
       workAreas: parsed.workAreas,
       secondaryCategory: parsed.secondaryCategory,
       availabilityHours: parsed.availabilityHours,
-      recommendedRole: parsed.category ? suggestRole(parsed.category, parsed.skills) : void 0,
+      recommendedRole: suggestRole(canonicalTrack, parsed.skills),
       status: meta?.status ?? "new",
       notes: meta?.notes ?? ""
     };

@@ -39,6 +39,18 @@ export interface EnrichedApplication extends ApplicationRow {
   notes: string;
 }
 
+export function normalizeTrack(raw: string | null | undefined): string {
+  if (!raw) return "Explore & Build";
+  const r = raw.trim();
+  const lower = r.toLowerCase();
+  if (lower.includes("startup") || lower.includes("business")) return "Startups & Business";
+  if (lower.includes("tech") || lower.includes("web") || lower.includes("product") || lower.includes("code")) return "Technology & Product";
+  if (lower.includes("creative") || lower.includes("media") || lower.includes("design") || lower.includes("visual") || lower.includes("video")) return "Creative & Media";
+  if (lower.includes("content") || lower.includes("community") || lower.includes("social") || lower.includes("writing")) return "Content & Community";
+  if (lower.includes("explore") || lower.includes("build") || lower.includes("learn")) return "Explore & Build";
+  return "Explore & Build";
+}
+
 function getSource(app: ApplicationRow): string {
   if (app.source && app.source.trim()) return app.source.trim();
   return "Direct";
@@ -52,8 +64,10 @@ export function enrichApplications(
     const parsed = parseToolsField(app.tools);
     const score = computeQualityScore(app);
     const meta = metaMap.get(app.id);
+    const canonicalTrack = normalizeTrack(app.track || parsed.category);
     return {
       ...app,
+      track: canonicalTrack,
       score: meta?.scoreOverride ?? score.total,
       tier: score.tier,
       scoreBreakdown: {
@@ -67,7 +81,7 @@ export function enrichApplications(
       workAreas: parsed.workAreas,
       secondaryCategory: parsed.secondaryCategory,
       availabilityHours: parsed.availabilityHours,
-      recommendedRole: parsed.category ? suggestRole(parsed.category, parsed.skills) : undefined,
+      recommendedRole: suggestRole(canonicalTrack, parsed.skills),
       status: meta?.status ?? "new",
       notes: meta?.notes ?? "",
     };

@@ -12,8 +12,8 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 const ALL_TRACKS = [
-  "Technology & Product",
   "Startups & Business",
+  "Technology & Product",
   "Creative & Media",
   "Content & Community",
   "Explore & Build",
@@ -37,16 +37,8 @@ export default function Talent() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const apps = appsQuery.data ?? [];
-
-  const tracks = useMemo(() => {
-    const list = Array.from(new Set([...ALL_TRACKS, ...apps.map((a) => a.track).filter(Boolean)]));
-    return list;
-  }, [apps]);
-
-  const years = useMemo(() => {
-    const list = Array.from(new Set([...ALL_YEARS, ...apps.map((a) => a.studyYear).filter(Boolean)]));
-    return list;
-  }, [apps]);
+  const tracks = ALL_TRACKS;
+  const years = ALL_YEARS;
 
   const ranked = useMemo(() => {
     return [...apps]
@@ -164,7 +156,20 @@ export default function Talent() {
                       <div style={{ fontWeight: 600, fontSize: 13, color: "#0f172a" }}>{app.fullName}</div>
                       <div style={{ fontSize: 11, color: "#94a3b8" }}>{app.college}</div>
                     </td>
-                    <td style={{ fontSize: 12, color: "#475569" }}>{app.track.split(" & ")[0]}</td>
+                    <td>
+                      <span style={{
+                        display: "inline-block",
+                        padding: "2px 7px",
+                        borderRadius: 5,
+                        background: "#eff6ff",
+                        color: "#1d4ed8",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                      }}>
+                        {app.track}
+                      </span>
+                    </td>
                     <td style={{ fontSize: 12, color: "#475569" }}>{app.studyYear}</td>
                     <td>
                       <span style={{
