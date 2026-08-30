@@ -1269,60 +1269,204 @@ button:disabled {
   }
 }
 
-/* Responsive Media Queries */
-@media (max-width: 960px) {
-  .vvlf-page {
-    padding: 16px;
-  }
-  .application-shell {
-    grid-template-columns: 1fr;
-  }
-  .identity-rail {
-    min-height: 0;
-    padding: 28px 24px;
-    border-radius: 0 0 24px 24px;
-  }
-  .rail-kicker {
-    margin-top: 24px;
-  }
-  .identity-rail h1 {
-    font-size: 2.3rem;
-  }
-  .rail-stages, .rail-visual {
-    display: none;
-  }
-  .canvas-header {
-    padding: 18px 24px;
-  }
-  .form-inner {
-    padding: 28px 20px;
-  }
-  .form-footer {
-    padding: 16px 20px;
-  }
-}
-
-@media (max-width: 640px) {
+/* Responsive Media Queries: Fast Mobile-First Flow */
+@media (max-width: 860px) {
   .vvlf-page {
     padding: 0;
+    min-height: 100vh;
+    background: #f8fafc;
   }
+
   .application-shell {
+    grid-template-columns: 1fr;
     border-radius: 0;
-    border: 0;
+    border: none;
+    box-shadow: none;
+    max-width: 100%;
   }
+
+  /* Compact Brand Bar on Mobile (Zero scroll fatigue) */
   .identity-rail {
-    border-radius: 0 0 20px 20px;
+    min-height: 0;
+    padding: 12px 16px;
+    border-radius: 0;
+    background: linear-gradient(135deg, #0e2760 0%, #1e40af 100%);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
   }
+
+  .logo-plaque {
+    padding: 6px 12px;
+    border-radius: 10px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  }
+
+  .logo-plaque img {
+    width: 130px;
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Hide heavy vertical text blocks, large banners & imagery on mobile to jump straight to questions */
+  .rail-kicker,
+  .identity-rail h1,
+  .rail-intro,
+  .no-idea-badge-sidebar,
+  .rail-stages,
+  .rail-visual {
+    display: none !important;
+  }
+
+  /* Compact Sticky Canvas Header */
+  .canvas-header {
+    padding: 12px 16px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .canvas-overline {
+    font-size: 10px;
+  }
+
+  .canvas-header p {
+    font-size: 12px;
+  }
+
+  /* Streamlined Form Content: Question -> Options -> Next */
+  .form-inner {
+    padding: 18px 16px 36px;
+  }
+
+  .step-panel h2 {
+    font-size: 1.45rem;
+    margin: 4px 0 6px;
+    line-height: 1.18;
+  }
+
+  .step-intro {
+    font-size: 13px;
+    margin-bottom: 14px;
+    line-height: 1.45;
+  }
+
+  .no-startup-idea-hero-banner {
+    padding: 10px 14px;
+    margin: 0 0 16px;
+    border-radius: 10px;
+  }
+
+  .no-idea-text strong {
+    font-size: 11.5px;
+  }
+
+  .no-idea-text p {
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+
   .field-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
+
+  .field-grid label, .choice-fieldset legend {
+    font-size: 12.5px;
+  }
+
+  .field-grid input, .field-grid select {
+    padding: 10px 12px;
+    font-size: 13.5px;
+  }
+
   .category-cards-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
+    margin: 12px 0 16px;
   }
+
+  .category-card {
+    padding: 14px 16px;
+    border-radius: 12px;
+  }
+
+  .category-card h3 {
+    font-size: 14.5px;
+  }
+
+  .category-card p {
+    font-size: 12.5px;
+  }
+
+  .secondary-category-box {
+    margin: 12px 0 18px;
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
+
+  .secondary-category-header p {
+    font-size: 13.5px;
+  }
+
+  .skills-chip-grid {
+    gap: 6px;
+  }
+
+  .skill-chip {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .pow-card {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .pow-header h3 {
+    font-size: 13.5px;
+  }
+
+  .pow-header p {
+    font-size: 12px;
+  }
+
+  .pow-dynamic-examples-badge {
+    padding: 8px 10px;
+    font-size: 11.5px;
+  }
+
+  .choice-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .choice-card {
+    padding: 10px 12px;
+    font-size: 12.5px;
+  }
+
+  .review-card {
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
+
+  .review-row {
+    font-size: 12.5px;
+  }
+
+  /* Thumb-friendly Sticky Action Footer */
   .form-footer {
     position: sticky;
     bottom: 0;
-    z-index: 10;
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+    z-index: 20;
+    padding: 10px 16px;
+    background: #ffffff;
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  .primary-button, .back-button {
+    height: 44px;
+    font-size: 14px;
   }
 }
