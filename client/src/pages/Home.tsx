@@ -262,7 +262,7 @@ interface FormState {
 
 const initialFormState: FormState = {
   fullName: "",
-  college: "B V Raju Institute of Technology (BVRIT Narsapur)",
+  college: "",
   department: "",
   studyYear: "1st Year",
   whatsapp: "",
@@ -701,7 +701,7 @@ export default function Home() {
 
                   <label>
                     College / University *
-                    <select
+                    <input
                       className={fieldErrors.college ? "input-invalid" : ""}
                       value={form.college}
                       onChange={(e) => {
@@ -713,13 +713,8 @@ export default function Home() {
                           }));
                         }
                       }}
-                    >
-                      {POPULAR_COLLEGES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="e.g. BVRIT, SVECW, VIT, CBIT, JNTU..."
+                    />
                     {fieldErrors.college && (
                       <span className="field-error-text">{fieldErrors.college}</span>
                     )}
