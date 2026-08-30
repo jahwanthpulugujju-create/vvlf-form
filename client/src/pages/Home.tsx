@@ -954,18 +954,46 @@ export default function Home() {
                     )}
                   </label>
 
-                  <label>
-                    Year of Study *
-                    <select
-                      value={form.studyYear}
-                      onChange={(e) => update("studyYear", e.target.value as any)}
-                    >
-                      <option value="1st Year">1st Year</option>
-                      <option value="2nd Year">2nd Year</option>
-                      <option value="3rd Year">3rd Year</option>
-                      <option value="4th Year">4th Year</option>
-                    </select>
-                  </label>
+                  <div className="study-year-field">
+                    <label style={{ display: "block", marginBottom: 8, fontSize: "14px", fontWeight: 600, color: "#1e293b" }}>
+                      Year of Study *
+                    </label>
+                    <div className="study-year-pill-group" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                      {STUDY_YEARS.map((yr) => {
+                        const isSelected = form.studyYear === yr;
+                        return (
+                          <button
+                            key={yr}
+                            type="button"
+                            className={`study-year-pill ${isSelected ? "selected" : ""}`}
+                            onClick={() => {
+                              update("studyYear", yr);
+                              if (fieldErrors.studyYear) {
+                                setFieldErrors((prev) => ({ ...prev, studyYear: "" }));
+                              }
+                            }}
+                            style={{
+                              padding: "10px 4px",
+                              borderRadius: "10px",
+                              border: isSelected ? "2px solid #2563eb" : "1.5px solid #e2e8f0",
+                              background: isSelected ? "#eff6ff" : "#ffffff",
+                              color: isSelected ? "#1d4ed8" : "#334155",
+                              fontSize: "13px",
+                              fontWeight: isSelected ? 700 : 500,
+                              cursor: "pointer",
+                              textAlign: "center",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            {yr}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {fieldErrors.studyYear && (
+                      <span className="field-error-text" style={{ marginTop: 4, display: "block" }}>{fieldErrors.studyYear}</span>
+                    )}
+                  </div>
 
                   <label>
                     WhatsApp Number *
