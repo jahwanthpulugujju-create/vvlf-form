@@ -35,7 +35,7 @@ import { trpc } from "@/lib/trpc";
 import { trackFunnelEvent } from "@/lib/funnelAnalytics";
 import { toast } from "sonner";
 
-const VVLF_LOGO = "/manus-storage/vvlf-logo-clean.png";
+const VVLF_LOGO = "/manus-storage/vvlf-logo-vector-clean.png";
 const HERO_IMAGE = "/manus-storage/vvlf-student-workspace_dc51b65e.png";
 const ABSTRACT_FIELD = "/manus-storage/vvlf-abstract-signal-field_86c3cd10.jpg";
 const CAPTION_LOGO = "/manus-storage/vvlf-symbol-logo_015c9f01.png";
