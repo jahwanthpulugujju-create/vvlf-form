@@ -516,10 +516,7 @@ button:disabled {
 
 /* Banner: No Startup Idea Required */
 .no-startup-idea-hero-banner {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 18px;
+  padding: 16px 20px;
   background: linear-gradient(135deg, #f0f7ff 0%, #e0edff 100%);
   border: 1px solid #bfdbfe;
   border-radius: 14px;

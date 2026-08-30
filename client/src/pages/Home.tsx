@@ -547,9 +547,6 @@ export default function Home() {
             </p>
 
             <div className="no-startup-idea-hero-banner" style={{ textAlign: "left", maxWidth: 520, margin: "0 auto 24px" }}>
-              <div className="no-idea-icon-pill">
-                <ShieldCheck size={18} />
-              </div>
               <div className="no-idea-text">
                 <strong>NO STARTUP IDEA REQUIRED</strong>
                 <p>You'll be working on real venture projects, products, and media with the VVLF team.</p>
@@ -605,7 +602,6 @@ export default function Home() {
           </p>
 
           <div className="no-idea-badge-sidebar">
-            <ShieldCheck size={18} style={{ color: "#93c5fd", flexShrink: 0, marginTop: 2 }} />
             <span>
               <strong>NO STARTUP IDEA REQUIRED</strong>
               No business idea or prior experience needed. Apply in under 60 seconds.
@@ -666,9 +662,6 @@ export default function Home() {
                 </p>
 
                 <div className="no-startup-idea-hero-banner">
-                  <div className="no-idea-icon-pill">
-                    <ShieldCheck size={20} />
-                  </div>
                   <div className="no-idea-text">
                     <strong>NO STARTUP IDEA REQUIRED.</strong>
                     <p>
