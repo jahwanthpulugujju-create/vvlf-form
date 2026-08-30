@@ -627,6 +627,33 @@ export default function Home() {
             ))}
           </div>
 
+          {/* WHY VVLF Real Credibility Block */}
+          <div className="rail-credibility-block">
+            <h4 className="rail-credibility-title">WHY VVLF</h4>
+            <div className="rail-credibility-list">
+              <div className="rail-credibility-item">
+                <strong>Real Projects</strong>
+                <p>Work beyond classroom assignments.</p>
+              </div>
+              <div className="rail-credibility-item">
+                <strong>Startup Exposure</strong>
+                <p>Understand how ideas become ventures.</p>
+              </div>
+              <div className="rail-credibility-item">
+                <strong>Cross-functional Teams</strong>
+                <p>Work alongside builders, creators and researchers.</p>
+              </div>
+              <div className="rail-credibility-item">
+                <strong>Portfolio Development</strong>
+                <p>Produce work you can actually show.</p>
+              </div>
+              <div className="rail-credibility-item">
+                <strong>Ecosystem Exposure</strong>
+                <p>Participate in relevant events, programs and collaborations.</p>
+              </div>
+            </div>
+          </div>
+
           <div className="rail-visual">
             <img src={HERO_IMAGE} alt="Students building projects at VVLF workspace" />
             <button
@@ -1275,11 +1302,27 @@ export default function Home() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="vvlf-about-points" aria-label="VVLF Pillars">
-            <span>🚀 Venture Scouting</span>
-            <span>💻 Full-Stack &amp; AI</span>
-            <span>🎨 Brand &amp; Media</span>
-            <span>📈 Growth &amp; Community</span>
+          <div className="vvlf-modal-credibility-grid" aria-label="Why VVLF">
+            <div className="modal-credibility-card">
+              <h4>Real Projects</h4>
+              <p>Work beyond classroom assignments on products that ship.</p>
+            </div>
+            <div className="modal-credibility-card">
+              <h4>Startup Exposure</h4>
+              <p>Understand how ideas become ventures and scale.</p>
+            </div>
+            <div className="modal-credibility-card">
+              <h4>Cross-functional Teams</h4>
+              <p>Work alongside builders, creators, and researchers.</p>
+            </div>
+            <div className="modal-credibility-card">
+              <h4>Portfolio Development</h4>
+              <p>Produce work and deployments you can actually show.</p>
+            </div>
+            <div className="modal-credibility-card modal-card-wide">
+              <h4>Ecosystem Exposure</h4>
+              <p>Participate in relevant events, venture programs, and ecosystem collaborations.</p>
+            </div>
           </div>
 
           <DialogFooter className="vvlf-about-actions">
