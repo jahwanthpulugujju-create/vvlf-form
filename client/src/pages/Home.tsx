@@ -648,14 +648,34 @@ export default function Home() {
         {/* Right Side: Form Canvas */}
         <section className="form-canvas">
           <header className="canvas-header">
-            <div>
-              <span className="canvas-overline">VVLF Student Builder Program</span>
-              <p>Step {step + 1} of 3 · Open to 1st–3rd year engineering students</p>
+            <div className="canvas-header-top">
+              <div className="canvas-header-title-block">
+                <span className="canvas-overline">VVLF STUDENT BUILDER PROGRAM</span>
+                <div className="canvas-progress-badge">
+                  {step === 0 && "1 of 3 — Quick 20s start"}
+                  {step === 1 && "2 of 3 — Almost there"}
+                  {step === 2 && "3 of 3 — Final check"}
+                </div>
+              </div>
+
+              <nav className="header-steps-nav" aria-label="Application progress">
+                <span className={`step-crumb ${step === 0 ? "current" : step > 0 ? "done" : ""}`}>
+                  About You {step > 0 ? "✓" : "●"}
+                </span>
+                <span className="step-crumb-sep">›</span>
+                <span className={`step-crumb ${step === 1 ? "current" : step > 1 ? "done" : ""}`}>
+                  Your Interests {step > 1 ? "✓" : step === 1 ? "●" : "○"}
+                </span>
+                <span className="step-crumb-sep">›</span>
+                <span className={`step-crumb ${step === 2 ? "current" : ""}`}>
+                  Final Check {step === 2 ? "●" : "○"}
+                </span>
+              </nav>
             </div>
+
             <div className="progress-track" aria-hidden="true">
               <span style={{ width: `${((step + 1) / 3) * 100}%` }} />
             </div>
-            <LockKeyhole size={18} style={{ color: "#64748b" }} aria-label="Secure application" />
           </header>
 
           <div className="form-inner">

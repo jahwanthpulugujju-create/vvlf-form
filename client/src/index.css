@@ -444,37 +444,85 @@ button:disabled {
 }
 
 .canvas-header {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 20px;
-  padding: 24px 38px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 36px 16px;
+  background: #ffffff;
   border-bottom: 1px solid var(--line);
 }
 
-.canvas-overline {
-  color: var(--vvlf-blue-vibrant);
+.canvas-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.canvas-header p {
-  margin: 3px 0 0;
-  color: var(--muted);
+.canvas-header-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.canvas-overline {
+  color: #64748b;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.canvas-progress-badge {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.header-steps-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 12.5px;
-  font-weight: 500;
+}
+
+.step-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #94a3b8;
+  font-weight: 600;
+  transition: color 0.2s var(--ease-out);
+}
+
+.step-crumb.current {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.step-crumb.done {
+  color: #059669;
+  font-weight: 600;
+}
+
+.step-crumb-sep {
+  color: #cbd5e1;
+  font-size: 14px;
+  user-select: none;
 }
 
 .progress-track {
-  height: 6px;
+  height: 5px;
   overflow: hidden;
   border-radius: 99px;
-  background: #e2e8f0;
+  background: #f1f5f9;
 }
 
 .progress-track span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  background: #2563eb;
   transition: width 0.35s var(--ease-out);
 }
 
@@ -1320,17 +1368,30 @@ button:disabled {
 
   /* Compact Sticky Canvas Header */
   .canvas-header {
-    padding: 12px 16px;
+    padding: 12px 16px 10px;
+    gap: 8px;
     background: #ffffff;
     border-bottom: 1px solid var(--line);
   }
 
-  .canvas-overline {
-    font-size: 10px;
+  .canvas-header-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
   }
 
-  .canvas-header p {
+  .canvas-overline {
+    font-size: 9.5px;
+  }
+
+  .canvas-progress-badge {
     font-size: 12px;
+  }
+
+  .header-steps-nav {
+    font-size: 11px;
+    gap: 5px;
+    flex-wrap: wrap;
   }
 
   /* Streamlined Form Content: Question -> Options -> Next */
