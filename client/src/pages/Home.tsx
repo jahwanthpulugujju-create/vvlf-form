@@ -663,9 +663,9 @@ export default function Home() {
             {step === 0 && (
               <section className="step-panel panel-enter">
                 <p className="eyebrow">01 / About You</p>
-                <h2>Start your journey with VVLF.</h2>
+                <h2>Let's get to know you.</h2>
                 <p className="step-intro">
-                  Tell us a bit about who you are. This helps us customize opportunities and support for your campus and year.
+                  Just the basics. This takes about 20 seconds.
                 </p>
 
                 <div className="no-startup-idea-hero-banner">
