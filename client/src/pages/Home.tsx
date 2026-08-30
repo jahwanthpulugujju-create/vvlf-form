@@ -11,6 +11,7 @@ import {
   FolderGit2,
   HelpCircle,
   Laptop,
+  Layers,
   Lightbulb,
   Link as LinkIcon,
   LockKeyhole,
@@ -20,7 +21,6 @@ import {
   ShieldCheck,
   TrendingUp,
   Video,
-  Zap,
 } from "lucide-react";
 import {
   Dialog,
@@ -1000,7 +1000,7 @@ export default function Home() {
                   </div>
 
                   <div className="pow-dynamic-examples-badge">
-                    <Zap size={14} />
+                    <Layers size={14} />
                     <span>
                       <strong>Suggested for {activeCategory.id}:</strong> {activeCategory.proofOfWorkExamples}
                     </span>
@@ -1096,22 +1096,6 @@ export default function Home() {
                         onClick={() => update("availabilityDuration", dur)}
                       >
                         {dur}
-                      </button>
-                    ))}
-                  </div>
-                </fieldset>
-
-                <fieldset className="choice-fieldset">
-                  <legend>When can you start?</legend>
-                  <div className="choice-grid">
-                    {START_TIMELINES.map((tl) => (
-                      <button
-                        key={tl}
-                        type="button"
-                        className={`choice-card ${form.startTimeline === tl ? "selected" : ""}`}
-                        onClick={() => update("startTimeline", tl)}
-                      >
-                        {tl}
                       </button>
                     ))}
                   </div>
