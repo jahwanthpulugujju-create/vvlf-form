@@ -28,6 +28,8 @@ interface AdminLayoutProps {
   requireAuth?: boolean;
 }
 
+const VVLF_SYMBOL_LOGO = "/manus-storage/vvlf-symbol-logo_015c9f01.png";
+
 const NAV_ITEMS = [
   { path: "/admin/overview",     label: "Overview",     icon: LayoutDashboard },
   { path: "/admin/applications", label: "Applications", icon: Users },
@@ -92,8 +94,17 @@ export default function AdminLayout({ children, title, breadcrumb, requireAuth =
         {/* Sidebar */}
         <aside className="admin-sidebar">
           <div className="admin-sidebar-header">
-            <div className="admin-sidebar-brand">VVLF</div>
-            <div className="admin-sidebar-title">Admin</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <img
+                src={VVLF_SYMBOL_LOGO}
+                alt="VVLF"
+                className="admin-sidebar-logo"
+              />
+              <div className="admin-sidebar-header-text">
+                <div className="admin-sidebar-brand">VVLF</div>
+                <div className="admin-sidebar-title">Admin</div>
+              </div>
+            </div>
           </div>
 
           <nav className="admin-nav">
@@ -133,7 +144,10 @@ export default function AdminLayout({ children, title, breadcrumb, requireAuth =
             {admin && (
               <div className="admin-user-badge">
                 <div className="admin-user-avatar">
-                  {(admin.displayName || admin.username).slice(0, 2).toUpperCase()}
+                  <img
+                    src={VVLF_SYMBOL_LOGO}
+                    alt="VVLF"
+                  />
                 </div>
                 <div className="admin-user-info">
                   <div className="admin-user-name">{admin.displayName || admin.username}</div>

@@ -42,8 +42,17 @@
 }
 
 .admin-sidebar-header {
-  padding: 20px 20px 16px;
+  padding: 18px 18px 14px;
   border-bottom: 1px solid #f1f5f9;
+}
+
+.admin-sidebar-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: block;
 }
 
 .admin-sidebar-brand {
@@ -52,13 +61,15 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #64748b;
+  line-height: 1;
 }
 
 .admin-sidebar-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   color: #0f172a;
   margin-top: 2px;
+  line-height: 1.2;
 }
 
 .admin-nav {
@@ -139,17 +150,22 @@
 }
 
 .admin-user-avatar {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #2563eb, #1e40af);
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 11px;
-  font-weight: 800;
   flex-shrink: 0;
+  background: #eff6ff;
+}
+
+.admin-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .admin-user-info {
@@ -944,13 +960,25 @@ table.admin-table tbody td {
     width: 60px;
   }
 
-  .admin-sidebar-header,
+  .admin-sidebar-header {
+    display: flex;
+    justify-content: center;
+    padding: 14px 6px;
+  }
+
+  .admin-sidebar-header-text,
   .admin-nav-section-label,
   .admin-nav-item span,
   .admin-user-info,
   .admin-sidebar-brand,
   .admin-sidebar-title {
     display: none;
+  }
+
+  .admin-user-badge {
+    justify-content: center;
+    padding: 6px 0;
+    background: transparent;
   }
 
   .admin-main {

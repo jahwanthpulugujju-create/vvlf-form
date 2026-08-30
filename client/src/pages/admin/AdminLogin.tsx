@@ -38,18 +38,17 @@ export default function AdminLogin() {
         <div className="admin-login-card">
           {/* Logo */}
           <div className="admin-login-logo">
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 52,
-              height: 52,
-              borderRadius: 12,
-              background: "linear-gradient(135deg, #1d4ed8, #1e3a8a)",
-              boxShadow: "0 4px 14px rgba(29, 78, 216, 0.3)",
-            }}>
-              <ShieldCheck size={26} color="white" />
-            </div>
+            <img
+              src="/manus-storage/vvlf-symbol-logo_015c9f01.png"
+              alt="VVLF Logo"
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                boxShadow: "0 4px 16px rgba(37, 99, 235, 0.15)",
+                display: "block",
+              }}
+            />
           </div>
 
           <h1 className="admin-login-heading">VVLF Admin Portal</h1>
