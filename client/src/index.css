@@ -109,19 +109,21 @@ button:disabled {
 .logo-plaque {
   display: inline-flex;
   width: fit-content;
-  padding: 10px 16px;
-  background: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 12px 28px rgba(7, 18, 56, 0.25);
+  padding: 0;
+  background: transparent;
+  border-radius: 18px;
+  box-shadow: 0 12px 28px rgba(7, 18, 56, 0.28);
   position: relative;
   z-index: 1;
+  overflow: hidden;
 }
 
 .logo-plaque img {
   display: block;
-  width: 175px;
+  width: 210px;
   max-width: 100%;
   height: auto;
+  border-radius: 18px;
 }
 
 .rail-kicker, .canvas-overline, .eyebrow {
@@ -1133,12 +1135,15 @@ button:disabled {
 }
 
 .thank-you-logo {
-  width: 220px;
-  padding: 10px 16px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow: 0 10px 24px rgba(20, 42, 120, 0.08);
+  width: 250px;
+  max-width: 100%;
+  height: auto;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 18px;
+  box-shadow: 0 12px 28px rgba(20, 42, 120, 0.12);
+  display: inline-block;
 }
 
 .thank-you-card {
