@@ -41,22 +41,21 @@ export function getAdminAccounts(): AdminAccount[] {
     }
   }
 
-  // Fall back to single admin env vars
-  const username = process.env.ADMIN_USERNAME;
-  const passwordHash = process.env.ADMIN_PASSWORD_HASH;
-  if (username && passwordHash) {
-    return [
-      {
-        username,
-        passwordHash,
-        displayName: process.env.ADMIN_DISPLAY_NAME ?? username,
-        role: "owner",
-        active: true,
-      },
-    ];
-  }
-
-  return [];
+  // Fall back to single admin env vars (with default fallback if unset)
+  const username = process.env.ADMIN_USERNAME || "admin";
+  const passwordHash =
+    process.env.ADMIN_PASSWORD_HASH ||
+    "$2b$10$oOBL75mo84LS0u3UfDoGQugBDreEClao3StuJ9J53G9jD5vi96TKO"; // default hash for vvlf2024!
+  
+  return [
+    {
+      username,
+      passwordHash,
+      displayName: process.env.ADMIN_DISPLAY_NAME || "VVLF Administrator",
+      role: "owner",
+      active: true,
+    },
+  ];
 }
 
 export function findAdminByUsername(username: string): AdminAccount | undefined {
@@ -200,7 +199,7 @@ export function getAdminCookieOptions(isProduction: boolean) {
   return {
     httpOnly: true,
     secure: isProduction,
-    sameSite: "strict" as const,
+    sameSite: "lax" as const,
     path: "/",
     maxAge: SESSION_EXPIRY_HOURS * 60 * 60 * 1000,
   };

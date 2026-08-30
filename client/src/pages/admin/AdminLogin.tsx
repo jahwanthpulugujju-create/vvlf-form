@@ -6,13 +6,15 @@ import "./admin.css";
 
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
+  const utils = trpc.useUtils();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
 
   const login = trpc.admin.login.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await utils.admin.me.invalidate();
       setLocation("/admin/overview");
     },
     onError: (err) => {

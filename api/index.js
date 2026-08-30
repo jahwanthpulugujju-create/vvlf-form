@@ -1326,20 +1326,17 @@ function getAdminAccounts() {
       console.warn("[AdminAuth] ADMIN_ACCOUNTS env is not valid JSON");
     }
   }
-  const username = process.env.ADMIN_USERNAME;
-  const passwordHash = process.env.ADMIN_PASSWORD_HASH;
-  if (username && passwordHash) {
-    return [
-      {
-        username,
-        passwordHash,
-        displayName: process.env.ADMIN_DISPLAY_NAME ?? username,
-        role: "owner",
-        active: true
-      }
-    ];
-  }
-  return [];
+  const username = process.env.ADMIN_USERNAME || "admin";
+  const passwordHash = process.env.ADMIN_PASSWORD_HASH || "$2b$10$oOBL75mo84LS0u3UfDoGQugBDreEClao3StuJ9J53G9jD5vi96TKO";
+  return [
+    {
+      username,
+      passwordHash,
+      displayName: process.env.ADMIN_DISPLAY_NAME || "VVLF Administrator",
+      role: "owner",
+      active: true
+    }
+  ];
 }
 function findAdminByUsername(username) {
   return getAdminAccounts().find(
@@ -1423,7 +1420,7 @@ function getAdminCookieOptions(isProduction) {
   return {
     httpOnly: true,
     secure: isProduction,
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     maxAge: SESSION_EXPIRY_HOURS * 60 * 60 * 1e3
   };

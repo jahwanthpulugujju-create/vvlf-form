@@ -54,8 +54,12 @@ export function useAdminAuth() {
 export default function AdminLayout({ children, title, breadcrumb, requireAuth = true }: AdminLayoutProps) {
   const [location, setLocation] = useLocation();
   const { admin, loading } = useAdminAuth();
+  const utils = trpc.useUtils();
   const logout = trpc.admin.logout.useMutation({
-    onSuccess: () => setLocation("/admin/login"),
+    onSuccess: async () => {
+      await utils.admin.me.invalidate();
+      setLocation("/admin/login");
+    },
   });
 
   useEffect(() => {
