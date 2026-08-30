@@ -1382,6 +1382,7 @@ button:disabled {
     padding: 0;
     min-height: 100vh;
     background: #f8fafc;
+    overflow-x: hidden;
   }
 
   .application-shell {
@@ -1390,12 +1391,14 @@ button:disabled {
     border: none;
     box-shadow: none;
     max-width: 100%;
+    width: 100%;
+    min-height: 100vh;
   }
 
   /* Compact Brand Bar on Mobile (Zero scroll fatigue) */
   .identity-rail {
     min-height: 0;
-    padding: 12px 16px;
+    padding: 10px 16px;
     border-radius: 0;
     background: linear-gradient(135deg, #0e2760 0%, #1e40af 100%);
     display: flex;
@@ -1404,13 +1407,14 @@ button:disabled {
   }
 
   .logo-plaque {
-    padding: 6px 12px;
+    padding: 5px 12px;
     border-radius: 10px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+    background: #ffffff;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
   }
 
   .logo-plaque img {
-    width: 130px;
+    width: 120px;
     max-width: 100%;
     height: auto;
   }
@@ -1421,11 +1425,12 @@ button:disabled {
   .rail-intro,
   .no-idea-badge-sidebar,
   .rail-stages,
+  .rail-credibility-block,
   .rail-visual {
     display: none !important;
   }
 
-  /* Compact Sticky Canvas Header */
+  /* Compact Canvas Header */
   .canvas-header {
     padding: 12px 16px 10px;
     gap: 8px;
@@ -1436,7 +1441,7 @@ button:disabled {
   .canvas-header-top {
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
+    gap: 5px;
   }
 
   .canvas-overline {
@@ -1444,7 +1449,7 @@ button:disabled {
   }
 
   .canvas-progress-badge {
-    font-size: 12px;
+    font-size: 12.5px;
   }
 
   .header-steps-nav {
@@ -1453,15 +1458,15 @@ button:disabled {
     flex-wrap: wrap;
   }
 
-  /* Streamlined Form Content: Question -> Options -> Next */
+  /* Streamlined Form Content */
   .form-inner {
-    padding: 18px 16px 36px;
+    padding: 16px 16px 36px;
   }
 
   .step-panel h2 {
-    font-size: 1.45rem;
+    font-size: 1.4rem;
     margin: 4px 0 6px;
-    line-height: 1.18;
+    line-height: 1.2;
   }
 
   .step-intro {
@@ -1471,8 +1476,8 @@ button:disabled {
   }
 
   .no-startup-idea-hero-banner {
-    padding: 10px 14px;
-    margin: 0 0 16px;
+    padding: 10px 13px;
+    margin: 0 0 14px;
     border-radius: 10px;
   }
 
@@ -1485,6 +1490,23 @@ button:disabled {
     line-height: 1.35;
   }
 
+  .search-pill-container {
+    margin-bottom: 14px;
+  }
+
+  .quick-search-tags {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    gap: 6px;
+    scrollbar-width: none;
+  }
+
+  .quick-search-tags::-webkit-scrollbar {
+    display: none;
+  }
+
   .field-grid {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -1494,20 +1516,29 @@ button:disabled {
     font-size: 12.5px;
   }
 
-  .field-grid input, .field-grid select {
-    padding: 10px 12px;
-    font-size: 13.5px;
+  /* 16px base font size prevents iOS auto-zooming into inputs on focus */
+  .field-grid input, .field-grid select, .custom-textarea, .pow-inputs input {
+    font-size: 16px !important;
+    min-height: 48px;
+    padding: 10px 14px;
+    border-radius: 12px;
   }
 
   .category-cards-grid {
     grid-template-columns: 1fr;
     gap: 10px;
-    margin: 12px 0 16px;
+    margin: 10px 0 14px;
   }
 
   .category-card {
-    padding: 14px 16px;
+    padding: 13px 15px;
     border-radius: 12px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .category-card:active {
+    transform: scale(0.985);
   }
 
   .category-card h3 {
@@ -1515,26 +1546,35 @@ button:disabled {
   }
 
   .category-card p {
-    font-size: 12.5px;
+    font-size: 12px;
+    line-height: 1.35;
   }
 
   .secondary-category-box {
-    margin: 12px 0 18px;
+    margin: 10px 0 16px;
     padding: 12px 14px;
     border-radius: 12px;
   }
 
   .secondary-category-header p {
-    font-size: 13.5px;
+    font-size: 13px;
   }
 
   .skills-chip-grid {
-    gap: 6px;
+    gap: 7px;
   }
 
   .skill-chip {
-    padding: 6px 12px;
-    font-size: 12px;
+    min-height: 38px;
+    padding: 7px 13px;
+    font-size: 12.5px;
+    border-radius: 10px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .skill-chip:active {
+    transform: scale(0.97);
   }
 
   .pow-card {
@@ -1561,6 +1601,7 @@ button:disabled {
   }
 
   .choice-card {
+    min-height: 44px;
     padding: 10px 12px;
     font-size: 12.5px;
   }
@@ -1574,19 +1615,34 @@ button:disabled {
     font-size: 12.5px;
   }
 
-  /* Thumb-friendly Sticky Action Footer */
+  /* Thumb-Friendly Sticky Action Footer on Mobile */
   .form-footer {
     position: sticky;
     bottom: 0;
-    z-index: 20;
-    padding: 10px 16px;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
     background: #ffffff;
     border-top: 1px solid var(--line);
     box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
   }
 
-  .primary-button, .back-button {
-    height: 44px;
+  .primary-action {
+    height: 48px;
+    flex: 1;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  }
+
+  .secondary-action {
+    height: 48px;
+    padding: 0 16px;
     font-size: 14px;
+    font-weight: 600;
+    border-radius: 12px;
   }
 }

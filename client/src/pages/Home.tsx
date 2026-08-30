@@ -888,6 +888,7 @@ export default function Home() {
                     <input
                       className={fieldErrors.fullName ? "input-invalid" : ""}
                       value={form.fullName}
+                      autoComplete="name"
                       onChange={(e) => {
                         update("fullName", e.target.value);
                         if (fieldErrors.fullName) {
@@ -909,6 +910,7 @@ export default function Home() {
                     <input
                       className={fieldErrors.college ? "input-invalid" : ""}
                       value={form.college}
+                      autoComplete="organization"
                       onChange={(e) => {
                         update("college", e.target.value);
                         if (fieldErrors.college) {
@@ -950,7 +952,7 @@ export default function Home() {
                     Year of Study *
                     <select
                       value={form.studyYear}
-                      onChange={(e) => update("studyYear", e.target.value)}
+                      onChange={(e) => update("studyYear", e.target.value as any)}
                     >
                       <option value="1st Year">1st Year</option>
                       <option value="2nd Year">2nd Year</option>
@@ -963,6 +965,11 @@ export default function Home() {
                     WhatsApp Number *
                     <input
                       className={fieldErrors.whatsapp ? "input-invalid" : ""}
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="tel"
+                      maxLength={10}
                       value={form.whatsapp}
                       onChange={(e) => {
                         const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
@@ -993,6 +1000,8 @@ export default function Home() {
                     <input
                       className={fieldErrors.email ? "input-invalid" : ""}
                       type="email"
+                      inputMode="email"
+                      autoComplete="email"
                       value={form.email}
                       onChange={(e) => {
                         update("email", e.target.value);
