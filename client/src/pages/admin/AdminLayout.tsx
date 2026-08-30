@@ -31,17 +31,17 @@ interface AdminLayoutProps {
 const VVLF_SYMBOL_LOGO = "/manus-storage/vvlf-symbol-logo_015c9f01.png";
 
 const NAV_ITEMS = [
-  { path: "/admin/overview",     label: "Overview",     icon: LayoutDashboard },
-  { path: "/admin/applications", label: "Applications", icon: Users },
-  { path: "/admin/analytics",    label: "Analytics",    icon: BarChart3 },
-  { path: "/admin/talent",       label: "Talent",       icon: Star },
-  { path: "/admin/acquisition",  label: "Acquisition",  icon: Megaphone },
-  { path: "/admin/skills",       label: "Skills",       icon: Zap },
+  { path: "/rdj/admin/overview",     label: "Overview",     icon: LayoutDashboard },
+  { path: "/rdj/admin/applications", label: "Applications", icon: Users },
+  { path: "/rdj/admin/analytics",    label: "Analytics",    icon: BarChart3 },
+  { path: "/rdj/admin/talent",       label: "Talent",       icon: Star },
+  { path: "/rdj/admin/acquisition",  label: "Acquisition",  icon: Megaphone },
+  { path: "/rdj/admin/skills",       label: "Skills",       icon: Zap },
 ];
 
 const BOTTOM_NAV = [
-  { path: "/admin/audit",    label: "Audit Log", icon: ScrollText },
-  { path: "/admin/settings", label: "Settings",  icon: Settings },
+  { path: "/rdj/admin/audit",    label: "Audit Log", icon: ScrollText },
+  { path: "/rdj/admin/settings", label: "Settings",  icon: Settings },
 ];
 
 export function useAdminAuth() {
@@ -60,13 +60,13 @@ export default function AdminLayout({ children, title, breadcrumb, requireAuth =
   const logout = trpc.admin.logout.useMutation({
     onSuccess: async () => {
       await utils.admin.me.invalidate();
-      setLocation("/admin/login");
+      setLocation("/rdj/admin/login");
     },
   });
 
   useEffect(() => {
     if (!loading && requireAuth && !admin) {
-      setLocation("/admin/login");
+      setLocation("/rdj/admin/login");
     }
   }, [admin, loading, requireAuth, setLocation]);
 

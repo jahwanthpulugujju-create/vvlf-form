@@ -15,7 +15,7 @@ export default function AdminLogin() {
   const login = trpc.admin.login.useMutation({
     onSuccess: async () => {
       await utils.admin.me.invalidate();
-      setLocation("/admin/overview");
+      setLocation("/rdj/admin/overview");
     },
     onError: (err) => {
       setError(err.message || "Login failed. Please check your credentials.");

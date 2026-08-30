@@ -22,16 +22,16 @@ function Router() {
       {/* Public form */}
       <Route path="/" component={Home} />
 
-      {/* Admin */}
-      <Route path="/admin" component={() => { window.location.href = "/admin/overview"; return null; }} />
-      <Route path="/admin/login" component={AdminLogin} />
-      <Route path="/admin/overview" component={Overview} />
-      <Route path="/admin/applications" component={Applications} />
-      <Route path="/admin/analytics" component={Analytics} />
-      <Route path="/admin/talent" component={Talent} />
-      <Route path="/admin/acquisition" component={Acquisition} />
-      <Route path="/admin/skills" component={Skills} />
-      <Route path="/admin/audit" component={AuditLog} />
+      {/* Secret Admin Portal */}
+      <Route path="/rdj/admin" component={() => { window.location.href = "/rdj/admin/overview"; return null; }} />
+      <Route path="/rdj/admin/login" component={AdminLogin} />
+      <Route path="/rdj/admin/overview" component={Overview} />
+      <Route path="/rdj/admin/applications" component={Applications} />
+      <Route path="/rdj/admin/analytics" component={Analytics} />
+      <Route path="/rdj/admin/talent" component={Talent} />
+      <Route path="/rdj/admin/acquisition" component={Acquisition} />
+      <Route path="/rdj/admin/skills" component={Skills} />
+      <Route path="/rdj/admin/audit" component={AuditLog} />
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
