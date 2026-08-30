@@ -15,6 +15,7 @@ import Talent from "./pages/admin/Talent";
 import Acquisition from "./pages/admin/Acquisition";
 import Skills from "./pages/admin/Skills";
 import AuditLog from "./pages/admin/AuditLog";
+import Settings from "./pages/admin/Settings";
 
 function Router() {
   return (
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/rdj/admin/acquisition" component={Acquisition} />
       <Route path="/rdj/admin/skills" component={Skills} />
       <Route path="/rdj/admin/audit" component={AuditLog} />
+      <Route path="/rdj/admin/settings" component={Settings} />
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
