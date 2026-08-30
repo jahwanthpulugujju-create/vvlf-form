@@ -899,7 +899,7 @@ export default function Home() {
                     onClick={() => setShowSecondarySelect(!showSecondarySelect)}
                   >
                     <p>Interested in more than one area? (Optional)</p>
-                    <span style={{ fontSize: "12px", color: "#2563eb", fontWeight: 700 }}>
+                    <span style={{ fontSize: "13.5px", color: "#2563eb", fontWeight: 700 }}>
                       {showSecondarySelect ? "Hide ▲" : "Select secondary ▼"}
                     </span>
                   </div>
