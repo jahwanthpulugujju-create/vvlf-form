@@ -1,146 +1,363 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, CircleHelp, ExternalLink, LockKeyhole, Sparkles } from "lucide-react";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  CircleHelp,
+  Compass,
+  Copy,
+  ExternalLink,
+  FolderGit2,
+  HelpCircle,
+  Laptop,
+  Lightbulb,
+  Link as LinkIcon,
+  LockKeyhole,
+  Rocket,
+  Search,
+  Share2,
+  Sparkles,
+  TrendingUp,
+  Video,
+  Zap,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
-import { trackCaptionEngagement } from "@/lib/captionAnalytics";
-import { remainingRequiredPrompts } from "@/lib/applicationProgress";
+import { trackFunnelEvent } from "@/lib/funnelAnalytics";
+import { toast } from "sonner";
 
 const VVLF_LOGO = "/manus-storage/vvlf-logo_4cc3b214.jpg";
 const HERO_IMAGE = "/manus-storage/vvlf-student-workspace_dc51b65e.png";
 const ABSTRACT_FIELD = "/manus-storage/vvlf-abstract-signal-field_86c3cd10.jpg";
-const WORKBENCH_IMAGE = HERO_IMAGE;
 const CAPTION_LOGO = "/manus-storage/vvlf-symbol-logo_015c9f01.png";
 const VVLF_WEBSITE_URL = "https://vishnuventurelabs.com/";
 
-// Applicants briefly see the confirmed state, then continue to VVLF's primary website.
-const POST_SUBMISSION_REDIRECT_URL = "https://vishnuventurelabs.com/";
-const REDIRECT_DELAY_MS = 1200;
-
-const tracks = [
+// Category Definitions
+export const CATEGORIES = [
   {
-    id: "Design & Visuals",
-    summary: "Canva, Figma, posters, slide decks, and visual communication.",
-    tools: ["Canva / Presentation Slides", "Figma (App/Web UI)", "Adobe Photoshop / Illustrator", "AI Image Tools"],
-    focusPrompt: "When working on a graphic or slide, what do you focus on first?",
-    focus: ["Clean alignment & spacing", "Choosing a good color scheme", "Clear, readable fonts", "Starting with a pre-built template"],
-    linkHint: "Share a Canva link, Drive folder, or design page if you have one.",
+    id: "Startups & Business",
+    title: "STARTUPS & BUSINESS",
+    icon: Rocket,
+    tagline: "Startups • Research • Strategy • Partnerships",
+    description: "Work on market mapping, venture research, strategy, business development, and ecosystem partnerships.",
+    workAreas: [
+      "Startup Research",
+      "Market Research",
+      "Strategy",
+      "Partnerships",
+      "Events",
+      "Business Development",
+    ],
+    skills: [
+      "Startup Research",
+      "Market Research",
+      "Business Analysis",
+      "Writing",
+      "Presentations",
+      "Excel / Sheets",
+      "Financial Analysis",
+      "Competitive Research",
+      "Events",
+      "Outreach",
+      "Networking",
+      "I’m still learning",
+    ],
+    proofOfWorkExamples: "Research document / analysis / article / pitch deck",
+    linkPlaceholder: "https://docs.google.com/... or Notion / article link",
   },
   {
-    id: "Video & Media",
-    summary: "Reels, editing, YouTube, short-form storytelling, and motion.",
-    tools: ["Mobile Editors (CapCut, VN, InShot)", "Desktop Editors (Premiere Pro, DaVinci)", "Motion Graphics", "Audio Cleanup Tools"],
-    focusPrompt: "In short video edits, what grabs your attention most?",
-    focus: ["Fast pacing & quick cuts", "High-energy background audio", "A strong visual hook", "Clean on-screen subtitles"],
-    linkHint: "Share an Instagram Reel, YouTube link, or Drive folder if you have one.",
+    id: "Technology & Product",
+    title: "TECHNOLOGY & PRODUCT",
+    icon: Laptop,
+    tagline: "Web • Coding • AI • Automation",
+    description: "Build web apps, internal tools, AI agents, automation pipelines, and modern digital products.",
+    workAreas: [
+      "Web Development",
+      "Full-Stack Development",
+      "AI",
+      "Automation",
+      "Product Building",
+    ],
+    skills: [
+      "Python",
+      "JavaScript",
+      "TypeScript",
+      "React",
+      "Next.js",
+      "HTML/CSS",
+      "APIs",
+      "Databases",
+      "Git/GitHub",
+      "AI/LLMs",
+      "Automation",
+      "I’m still learning",
+    ],
+    proofOfWorkExamples: "GitHub / deployed project / technical portfolio",
+    linkPlaceholder: "https://github.com/... or deployed project link",
   },
   {
-    id: "Tech & Web",
-    summary: "Coding, web development, Python, and no-code tools.",
-    tools: ["Web Basics (HTML/CSS/JS)", "Modern Web (React, Next.js, Tailwind)", "Python / Logic Building", "No-Code Builders (Framer, Webflow)", "Git & GitHub"],
-    focusPrompt: "When a web project shows an error, what is your go-to move?",
-    focus: ["Copy-paste the error into ChatGPT / Google", "Debug line-by-line", "Ask a friend or mentor for help", "Re-watch the tutorial step"],
-    linkHint: "Share a GitHub, Vercel, or Drive link if you have one.",
+    id: "Creative & Media",
+    title: "CREATIVE & MEDIA",
+    icon: Video,
+    tagline: "Design • Video • Motion Graphics • Photography",
+    description: "Create visual identities, brand design, UI/UX mockups, cinematic video production, and motion graphics.",
+    workAreas: [
+      "Graphic Design",
+      "UI/UX",
+      "Branding",
+      "Video Editing",
+      "Motion Graphics",
+      "Photography",
+    ],
+    skills: [
+      "Graphic Design",
+      "Figma",
+      "Canva",
+      "Photoshop",
+      "Illustrator",
+      "UI/UX",
+      "Video Editing",
+      "Premiere Pro",
+      "DaVinci Resolve",
+      "After Effects",
+      "Motion Graphics",
+      "Photography",
+      "Audio",
+      "I’m still learning",
+    ],
+    proofOfWorkExamples: "Figma / Canva / Behance / portfolio / YouTube / Drive",
+    linkPlaceholder: "https://figma.com/... or Behance / YouTube / Drive link",
   },
   {
-    id: "Content & Events",
-    summary: "Writing, social media, campus events, and peer outreach.",
-    tools: ["Social Media Writing", "Event Operations & Logistics", "Community & Peer Outreach", "Public Speaking & Hosting"],
-    focusPrompt: "How do you prefer sharing ideas or updates with students?",
-    focus: ["Short, punchy posts", "Short video or audio announcements", "Direct WhatsApp messages", "In-person classroom announcements"],
-    linkHint: "Share a Google Doc, blog, or LinkedIn post if you have one.",
+    id: "Content & Community",
+    title: "CONTENT & COMMUNITY",
+    icon: TrendingUp,
+    tagline: "Social Media • Content • Marketing • Community",
+    description: "Drive social media growth, write founder stories, produce viral short-form content, and build founder community.",
+    workAreas: [
+      "Content Creation",
+      "Social Media",
+      "Marketing",
+      "Community",
+      "Outreach",
+    ],
+    skills: [
+      "Copywriting",
+      "LinkedIn",
+      "Instagram",
+      "Content Strategy",
+      "Social Media",
+      "Marketing",
+      "SEO",
+      "Community Management",
+      "Outreach",
+      "Communication",
+      "I’m still learning",
+    ],
+    proofOfWorkExamples: "LinkedIn / article / newsletter / Instagram / campaign",
+    linkPlaceholder: "https://linkedin.com/in/... or article / social link",
   },
   {
-    id: "Fast Learner / Generalist",
-    summary: "AI power use, operations, practical problem-solving, and quick learning.",
-    tools: ["AI Tools Power-User", "Formatting Docs & Slides", "On-Ground Event Coordination", "Organizing Spreadsheets & Data", "Learning new tools quickly"],
-    focusPrompt: "How do you prefer to master an unfamiliar software tool?",
-    focus: ["Watch a fast YouTube walkthrough", "Click around and test directly", "Ask AI for a step-by-step breakdown", "Follow written documentation"],
-    linkHint: "Share any Google Doc, Notion page, or project report if available.",
+    id: "Explore & Build",
+    title: "EXPLORE & BUILD",
+    icon: Compass,
+    tagline: "Multiple interests • Still learning • Find your fit",
+    description: "Curious, multi-talented, or just getting started? Explore across technology, design, business, and community.",
+    workAreas: [
+      "I am good at multiple things",
+      "I am still learning",
+      "I want to try different areas",
+      "I am not sure where I fit yet",
+    ],
+    skills: [
+      "Technology",
+      "Startups",
+      "Design",
+      "Media",
+      "Content",
+      "Community",
+      "Events",
+      "Business",
+      "I’m still learning",
+    ],
+    proofOfWorkExamples: "Any project, document, Notion page, writeup, or sample",
+    linkPlaceholder: "https://... (Optional project or doc link)",
   },
 ] as const;
 
-type TrackId = (typeof tracks)[number]["id"];
+export type CategoryId = (typeof CATEGORIES)[number]["id"];
 
-type FormState = {
+const POPULAR_COLLEGES = [
+  "B V Raju Institute of Technology (BVRIT Narsapur)",
+  "BVRIT Hyderabad College of Engineering for Women",
+  "Vishnu Institute of Technology (VITB Bhimavaram)",
+  "Shri Vishnu Engineering College for Women (SVECW)",
+  "Other College / University",
+];
+
+const STUDY_YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"] as const;
+
+const AVAILABILITY_HOURS = [
+  "5–8 hours",
+  "8–12 hours",
+  "12–20 hours",
+  "20+ hours",
+] as const;
+
+const AVAILABILITY_DURATIONS = [
+  "3 months",
+  "6 months",
+  "9 months",
+  "12+ months",
+] as const;
+
+const START_TIMELINES = [
+  "Immediately",
+  "Within 2 weeks",
+  "Within 1 month",
+] as const;
+
+const MOTIVATION_GOALS = [
+  "Build real projects",
+  "Learn new skills",
+  "Work with startups",
+  "Build my portfolio",
+  "Meet founders and mentors",
+  "Work on media/content",
+  "Explore entrepreneurship",
+  "Gain practical experience",
+] as const;
+
+interface FormState {
   fullName: string;
   college: string;
   department: string;
-  studyYear: "" | "1st Year" | "2nd Year" | "3rd Year" | "4th Year";
+  studyYear: "" | (typeof STUDY_YEARS)[number];
   whatsapp: string;
   email: string;
-  track: "" | TrackId;
-  tools: string[];
-  focus: string;
-  portfolioLink: string;
-  goal: "" | "Build real projects to boost my resume" | "Learn modern tools & AI workflows" | "Gain leadership & event experience" | "Connect with peers and mentors";
-  workstation: "" | "I have my own personal laptop" | "I will use campus systems and foundation labs";
+  category: "" | CategoryId;
+  secondaryCategory: string;
+  workAreas: string[];
+  skills: string[];
+  proofOfWorkLink: string;
+  proofOfWorkLink2: string;
+  noWorkToShare: boolean;
+  learningInterest: string;
+  availabilityHours: (typeof AVAILABILITY_HOURS)[number];
+  availabilityDuration: (typeof AVAILABILITY_DURATIONS)[number];
+  startTimeline: (typeof START_TIMELINES)[number];
+  goals: string[];
+  contribution: string;
   consent: boolean;
-};
+}
 
-const emptyForm: FormState = {
+const initialFormState: FormState = {
   fullName: "",
-  college: "",
+  college: "B V Raju Institute of Technology (BVRIT Narsapur)",
   department: "",
-  studyYear: "",
+  studyYear: "1st Year",
   whatsapp: "",
   email: "",
-  track: "",
-  tools: [],
-  focus: "",
-  portfolioLink: "",
-  goal: "",
-  workstation: "",
+  category: "Technology & Product",
+  secondaryCategory: "",
+  workAreas: ["Web Development", "AI"],
+  skills: ["React", "Python", "Git/GitHub"],
+  proofOfWorkLink: "",
+  proofOfWorkLink2: "",
+  noWorkToShare: false,
+  learningInterest: "",
+  availabilityHours: "8–12 hours",
+  availabilityDuration: "6 months",
+  startTimeline: "Immediately",
+  goals: ["Build real projects", "Build my portfolio"],
+  contribution: "",
   consent: false,
 };
 
-function canUseRedirect() {
-  try {
-    const url = new URL(POST_SUBMISSION_REDIRECT_URL);
-    return url.protocol === "https:" || url.protocol === "http:";
-  } catch {
-    return false;
-  }
-}
-
 export default function Home() {
   const [step, setStep] = useState(0);
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const [form, setForm] = useState<FormState>(initialFormState);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [recommendedRole, setRecommendedRole] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSecondarySelect, setShowSecondarySelect] = useState(false);
+  const [showLink2, setShowLink2] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+
   const submitApplication = trpc.application.submit.useMutation();
 
-  const currentTrack = useMemo(() => tracks.find((track) => track.id === form.track), [form.track]);
-  const redirectEnabled = canUseRedirect();
-  const remainingPrompts = remainingRequiredPrompts([
-    form.fullName.trim(), form.college.trim(), form.department.trim(), form.studyYear,
-    form.whatsapp.trim(), form.email.trim(), form.track, form.tools.length > 0,
-    form.focus, form.goal, form.workstation, form.consent,
-  ]);
-
   useEffect(() => {
-    if (!submitted || !redirectEnabled) return;
-    const timer = window.setTimeout(() => window.location.assign(POST_SUBMISSION_REDIRECT_URL), REDIRECT_DELAY_MS);
-    return () => window.clearTimeout(timer);
-  }, [submitted, redirectEnabled]);
+    trackFunnelEvent("landing_view");
+  }, []);
+
+  const activeCategory = useMemo(() => {
+    return CATEGORIES.find((c) => c.id === form.category) || CATEGORIES[1];
+  }, [form.category]);
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setForm((previous) => ({ ...previous, [key]: value }));
+    setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const toggleTool = (tool: string) => {
-    setForm((previous) => {
-      const updatedTools = previous.tools.includes(tool)
-        ? previous.tools.filter((item) => item !== tool)
-        : [...previous.tools, tool];
-      if (fieldErrors.tools) {
-        setFieldErrors((prev) => ({
-          ...prev,
-          tools: updatedTools.length === 0 ? "Choose at least one capability." : "",
-        }));
+  const handleSearchFilter = (query: string) => {
+    setSearchQuery(query);
+    const q = query.toLowerCase().trim();
+    if (!q) return;
+
+    trackFunnelEvent("search_query_used", { query: q });
+
+    if (q.includes("motion") || q.includes("video") || q.includes("figma") || q.includes("photo") || q.includes("design") || q.includes("davinci") || q.includes("after effects")) {
+      update("category", "Creative & Media");
+    } else if (q.includes("react") || q.includes("code") || q.includes("web") || q.includes("python") || q.includes("ai") || q.includes("llm") || q.includes("fullstack")) {
+      update("category", "Technology & Product");
+    } else if (q.includes("startup") || q.includes("market") || q.includes("research") || q.includes("venture") || q.includes("business") || q.includes("strategy")) {
+      update("category", "Startups & Business");
+    } else if (q.includes("social") || q.includes("content") || q.includes("instagram") || q.includes("marketing") || q.includes("community") || q.includes("reels") || q.includes("writing")) {
+      update("Content & Community" as any, "Content & Community" as any);
+      update("category", "Content & Community");
+    } else if (q.includes("beginner") || q.includes("learn") || q.includes("explore") || q.includes("all")) {
+      update("category", "Explore & Build");
+    }
+  };
+
+  const toggleWorkArea = (area: string) => {
+    setForm((prev) => {
+      const updated = prev.workAreas.includes(area)
+        ? prev.workAreas.filter((a) => a !== area)
+        : [...prev.workAreas, area];
+      return { ...prev, workAreas: updated };
+    });
+  };
+
+  const toggleSkill = (skill: string) => {
+    setForm((prev) => {
+      const updated = prev.skills.includes(skill)
+        ? prev.skills.filter((s) => s !== skill)
+        : [...prev.skills, skill];
+      
+      if (fieldErrors.skills) {
+        setFieldErrors((e) => ({ ...e, skills: updated.length === 0 ? "Choose at least one skill or 'I’m still learning'." : "" }));
       }
-      return { ...previous, tools: updatedTools };
+      return { ...prev, skills: updated };
+    });
+  };
+
+  const toggleGoal = (goal: string) => {
+    setForm((prev) => {
+      const updated = prev.goals.includes(goal)
+        ? prev.goals.filter((g) => g !== goal)
+        : [...prev.goals, goal];
+      return { ...prev, goals: updated };
     });
   };
 
@@ -152,14 +369,12 @@ export default function Home() {
         return "";
       case "college":
         if (!String(value || "").trim()) return "College or university name is required.";
-        if (String(value || "").trim().length < 2) return "Please enter at least 2 characters.";
         return "";
       case "department":
-        if (!String(value || "").trim()) return "Department / branch is required.";
-        if (String(value || "").trim().length < 2) return "Please enter at least 2 characters.";
+        if (!String(value || "").trim()) return "Department / branch is required (e.g. CSE, ECE).";
         return "";
       case "studyYear":
-        if (!value) return "Please choose your current year.";
+        if (!value) return "Please select your year of study.";
         return "";
       case "whatsapp":
         if (!String(value || "").trim()) return "WhatsApp number is required.";
@@ -169,35 +384,27 @@ export default function Home() {
         return "";
       case "email":
         if (!String(value || "").trim()) return "Email address is required.";
-        if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(String(value || "").trim())) {
-          return "Please enter a valid email address (e.g. name@example.com).";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim())) {
+          return "Please enter a valid email address.";
         }
         return "";
-      case "track":
-        if (!value) return "Please select one focus track.";
+      case "category":
+        if (!value) return "Please choose your primary interest area.";
         return "";
-      case "tools":
-        if (!Array.isArray(value) || value.length === 0) return "Choose at least one capability.";
-        return "";
-      case "focus":
-        if (!value) return "Please select the answer that fits you best.";
-        return "";
-      case "goal":
-        if (!value) return "Please choose your primary goal.";
-        return "";
-      case "workstation":
-        if (!value) return "Please select your workstation access.";
+      case "skills":
+        if (!Array.isArray(value) || value.length === 0) return "Please select at least one skill or 'I’m still learning'.";
         return "";
       case "consent":
-        if (!value) return "Please accept the privacy notice and consent.";
+        if (!value) return "Please confirm the privacy and consent statement.";
         return "";
       default:
         return "";
     }
   };
 
-  const validateStep = (stepNumber: number) => {
+  const validateStep = (stepNumber: number): string => {
     const errors: Record<string, string> = {};
+
     if (stepNumber === 0) {
       const nameErr = validateField("fullName", form.fullName);
       if (nameErr) errors.fullName = nameErr;
@@ -216,343 +423,869 @@ export default function Home() {
 
       const emailErr = validateField("email", form.email);
       if (emailErr) errors.email = emailErr;
-
-      const trackErr = validateField("track", form.track);
-      if (trackErr) errors.track = trackErr;
     } else if (stepNumber === 1) {
-      const toolsErr = validateField("tools", form.tools);
-      if (toolsErr) errors.tools = toolsErr;
+      const catErr = validateField("category", form.category);
+      if (catErr) errors.category = catErr;
 
-      const focusErr = validateField("focus", form.focus);
-      if (focusErr) errors.focus = focusErr;
+      const skillsErr = validateField("skills", form.skills);
+      if (skillsErr) errors.skills = skillsErr;
     } else if (stepNumber === 2) {
-      const goalErr = validateField("goal", form.goal);
-      if (goalErr) errors.goal = goalErr;
-
-      const workstationErr = validateField("workstation", form.workstation);
-      if (workstationErr) errors.workstation = workstationErr;
-
       const consentErr = validateField("consent", form.consent);
       if (consentErr) errors.consent = consentErr;
     }
 
     setFieldErrors(errors);
-    const firstErrorMessage = Object.values(errors)[0] || "";
-    return firstErrorMessage;
+    return Object.values(errors)[0] || "";
   };
 
   const nextStep = () => {
-    const validationMessage = validateStep(step);
-    if (validationMessage) {
-      setError(validationMessage);
+    const errorMsg = validateStep(step);
+    if (errorMsg) {
+      setError(errorMsg);
       return;
     }
     setError("");
     setFieldErrors({});
-    setStep((current) => Math.min(current + 1, 2));
+    trackFunnelEvent("step_complete", { step: step + 1 });
+    setStep((curr) => Math.min(curr + 1, 2));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const prevStep = () => {
+    setError("");
+    setStep((curr) => Math.max(curr - 1, 0));
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const submit = async () => {
-    const validationMessage = validateStep(step);
-    if (validationMessage || !form.track) {
-      setError(validationMessage || "Choose a focus track before submitting.");
+    const errorMsg = validateStep(step);
+    if (errorMsg) {
+      setError(errorMsg);
       return;
     }
+
     try {
       setError("");
-      await submitApplication.mutateAsync({
-        ...form,
-        track: form.track,
-        studyYear: form.studyYear as "1st Year" | "2nd Year" | "3rd Year" | "4th Year",
-        goal: form.goal as "Build real projects to boost my resume" | "Learn modern tools & AI workflows" | "Gain leadership & event experience" | "Connect with peers and mentors",
-        workstation: form.workstation as "I have my own personal laptop" | "I will use campus systems and foundation labs",
+      const result = await submitApplication.mutateAsync({
+        fullName: form.fullName.trim(),
+        college: form.college.trim(),
+        department: form.department.trim(),
+        studyYear: form.studyYear as any,
+        whatsapp: form.whatsapp.trim(),
+        email: form.email.trim(),
+        category: form.category || "Explore & Build",
+        secondaryCategory: form.secondaryCategory || undefined,
+        workAreas: form.workAreas,
+        skills: form.skills.length > 0 ? form.skills : ["I’m still learning"],
+        proofOfWorkLink: form.proofOfWorkLink.trim() || undefined,
+        proofOfWorkLink2: form.proofOfWorkLink2.trim() || undefined,
+        noWorkToShare: form.noWorkToShare,
+        learningInterest: form.learningInterest.trim() || undefined,
+        availabilityHours: form.availabilityHours,
+        availabilityDuration: form.availabilityDuration,
+        startTimeline: form.startTimeline,
+        goals: form.goals,
+        contribution: form.contribution.trim() || undefined,
         consent: true,
       });
+
+      if (result.recommendedRole) {
+        setRecommendedRole(result.recommendedRole);
+      }
+      trackFunnelEvent("application_submitted", {
+        category: form.category,
+        recommendedRole: result.recommendedRole,
+      });
       setSubmitted(true);
-    } catch (submissionError) {
-      setError(submissionError instanceof Error ? submissionError.message : "We could not save your application. Please try again.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "We could not save your application. Please try again.");
     }
+  };
+
+  const handleCopyLink = () => {
+    const url = window.location.origin;
+    navigator.clipboard.writeText(url);
+    toast.success("Application link copied to clipboard!");
+    trackFunnelEvent("copy_link_clicked");
+  };
+
+  const handleShareWhatsApp = () => {
+    const text = encodeURIComponent(
+      `Hey! VVLF (Vishnu Venture Labs Foundation) has opened applications for their Student Builder Program. You can work across Tech, AI, Design, Media, Startups & Growth (No startup idea required!). Apply here in 1 min: ${window.location.origin}`
+    );
+    window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
+    trackFunnelEvent("share_whatsapp_clicked");
   };
 
   const restart = () => {
-    setForm(emptyForm);
+    setForm(initialFormState);
     setError("");
     setStep(0);
     setSubmitted(false);
-  };
-
-  const openAbout = () => {
-    trackCaptionEngagement("vvlf_caption_opened");
-    setAboutOpen(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   if (submitted) {
     return (
-      <main className="vvlf-page" style={{ backgroundImage: `linear-gradient(rgba(247, 250, 255, 0.92), rgba(255, 251, 248, 0.94)), url(${ABSTRACT_FIELD})` }}>
+      <main
+        className="vvlf-page"
+        style={{
+          backgroundImage: `linear-gradient(rgba(248, 250, 255, 0.94), rgba(255, 252, 249, 0.96)), url(${ABSTRACT_FIELD})`,
+        }}
+      >
         <section className="thank-you-shell">
           <img className="thank-you-logo" src={VVLF_LOGO} alt="Vishnu Venture Labs Foundation" />
-          <div className="thank-you-card">
-            <div className="success-orbit"><CheckCircle2 size={34} strokeWidth={2.4} /></div>
-            <p className="eyebrow">Application received</p>
-            <h1>Thank you for applying.</h1>
-            <p className="thank-you-copy">Your application for the <strong>{form.track}</strong> track is now with the VVLF team. We look for drive, curiosity, and a willingness to learn—not only past experience.</p>
-            {redirectEnabled ? (
-              <p className="redirect-note"><ExternalLink size={16} /> Taking you to the next step now.</p>
-            ) : (
-              <p className="redirect-note"><Sparkles size={16} /> If selected for the next stage, the team will contact you through the details you provided.</p>
-            )}
-            {!redirectEnabled && <button className="text-button" type="button" onClick={restart}>Submit another application</button>}
+          <div className="thank-you-card panel-enter">
+            <div className="success-orbit">
+              <CheckCircle2 size={36} strokeWidth={2.4} />
+            </div>
+            <p className="eyebrow">Application Received</p>
+            <h1>You're in the builder funnel.</h1>
+            <p className="thank-you-copy">
+              Thank you for applying for <strong>{form.category}</strong>. Our team is screening applications and looking for high-curiosity builders.
+            </p>
+
+            <div className="no-startup-idea-hero-banner" style={{ textAlign: "left", maxWidth: 520, margin: "0 auto 24px" }}>
+              <div className="no-idea-icon-pill">
+                <Sparkles size={18} />
+              </div>
+              <div className="no-idea-text">
+                <strong>NO STARTUP IDEA REQUIRED</strong>
+                <p>You'll be working on real venture projects, products, and media with the VVLF team.</p>
+              </div>
+            </div>
+
+            <div className="thank-you-share-box">
+              <h4>Know someone who would be a great fit?</h4>
+              <p>Invite friends and classmates who love to code, design, edit videos, or explore.</p>
+              <div className="share-buttons">
+                <button className="whatsapp-share-btn" type="button" onClick={handleShareWhatsApp}>
+                  <Share2 size={16} /> Share on WhatsApp
+                </button>
+                <button className="copy-link-btn" type="button" onClick={handleCopyLink}>
+                  <Copy size={16} /> Copy Application Link
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginTop: "28px" }}>
+              <button className="text-button" type="button" onClick={restart}>
+                Submit another application
+              </button>
+            </div>
           </div>
         </section>
       </main>
     );
   }
 
-  const stageTitles = ["Your starting point", "Your working style", "One final check"];
+  const stageTitles = ["About You", "Your Interests & Skills", "Proof of Work & Availability"];
 
   return (
-    <main className="vvlf-page" style={{ backgroundImage: `linear-gradient(rgba(248, 250, 255, 0.9), rgba(255, 252, 249, 0.95)), url(${ABSTRACT_FIELD})` }}>
+    <main
+      className="vvlf-page"
+      style={{
+        backgroundImage: `linear-gradient(rgba(248, 250, 255, 0.92), rgba(255, 252, 249, 0.96)), url(${ABSTRACT_FIELD})`,
+      }}
+    >
       <div className="application-shell">
+        {/* Left Side: Brand & Identity Rail */}
         <aside className="identity-rail">
-          <div className="logo-plaque"><img src={VVLF_LOGO} alt="Vishnu Venture Labs Foundation logo" /></div>
-          <p className="rail-kicker">Student Innovation &amp; Portfolio Track</p>
-          <h1>Build work that proves what you can become.</h1>
-          <p className="rail-intro">No portfolio is required to begin. Bring your curiosity, choose a direction, and show us how you like to learn.</p>
-          <div className="rail-stages" aria-label="Application stages">
-            {stageTitles.map((title, index) => <div className={`rail-stage ${step === index ? "current" : ""} ${step > index ? "done" : ""}`} key={title}><span>{step > index ? <Check size={14} /> : `0${index + 1}`}</span><p>{title}</p></div>)}
+          <div className="logo-plaque">
+            <img src={VVLF_LOGO} alt="Vishnu Venture Labs Foundation" />
           </div>
+
+          <p className="rail-kicker">
+            <span className="rail-kicker-dot" /> VVLF Student Builder Program
+          </p>
+          <h1>Find your place at VVLF.</h1>
+          <p className="rail-intro">
+            Build with a real venture ecosystem. Work on real projects across startups, technology, AI, media, design, growth and partnerships.
+          </p>
+
+          <div className="no-idea-badge-sidebar">
+            <Sparkles size={18} style={{ color: "#93c5fd", flexShrink: 0, marginTop: 2 }} />
+            <span>
+              <strong>NO STARTUP IDEA REQUIRED</strong>
+              No business idea or prior experience needed. Apply in under 60 seconds.
+            </span>
+          </div>
+
+          <div className="rail-stages" aria-label="Application progress">
+            {stageTitles.map((title, index) => (
+              <div
+                className={`rail-stage ${step === index ? "current" : ""} ${step > index ? "done" : ""}`}
+                key={title}
+              >
+                <span>{step > index ? <Check size={14} /> : `0${index + 1}`}</span>
+                <p>{title}</p>
+              </div>
+            ))}
+          </div>
+
           <div className="rail-visual">
-            <img src={HERO_IMAGE} alt="Student building a project in a creative workspace" />
-            <button className="visual-caption" type="button" onClick={openAbout} aria-haspopup="dialog" aria-label="Learn about Vishnu Venture Labs Foundation">
+            <img src={HERO_IMAGE} alt="Students building projects at VVLF workspace" />
+            <button
+              className="visual-caption"
+              type="button"
+              onClick={() => {
+                trackFunnelEvent("about_modal_opened");
+                setAboutOpen(true);
+              }}
+              aria-haspopup="dialog"
+            >
               <img src={CAPTION_LOGO} alt="" aria-hidden="true" />
-              <span>Turn curiosity into your next build. Meet VVLF.</span>
+              <span>Turn campus curiosity into real builds. Meet VVLF.</span>
               <CircleHelp size={14} aria-hidden="true" />
             </button>
           </div>
         </aside>
 
+        {/* Right Side: Form Canvas */}
         <section className="form-canvas">
           <header className="canvas-header">
-            <div><span className="canvas-overline">VVLF application</span><p>Step {step + 1} of 3 · {remainingPrompts} required prompt{remainingPrompts === 1 ? "" : "s"} remaining</p></div>
-            <div className="progress-track" aria-hidden="true"><span style={{ width: `${((step + 1) / 3) * 100}%` }} /></div>
-            <LockKeyhole size={18} aria-label="Private application" />
+            <div>
+              <span className="canvas-overline">VVLF Student Builder Program</span>
+              <p>Step {step + 1} of 3 · Open to 1st–3rd year engineering students</p>
+            </div>
+            <div className="progress-track" aria-hidden="true">
+              <span style={{ width: `${((step + 1) / 3) * 100}%` }} />
+            </div>
+            <LockKeyhole size={18} style={{ color: "#64748b" }} aria-label="Secure application" />
           </header>
 
           <div className="form-inner">
-            {step === 0 && <section className="step-panel panel-enter">
-              <p className="eyebrow">01 / Your starting point</p>
-              <h2>Choose the work you are ready to grow into.</h2>
-              <p className="step-intro">Tell us a little about yourself, then choose the direction that feels most exciting. This is not a test; it helps us shape the right project context for you.</p>
-              <div className="trust-line"><CircleHelp size={17} /><span>Required fields are marked. Your answers are saved only when you submit.</span></div>
-              <div className="field-grid">
-                <label>
-                  Full name *
-                  <input
-                    className={fieldErrors.fullName ? "input-invalid" : ""}
-                    value={form.fullName}
-                    onChange={(event) => {
-                      update("fullName", event.target.value);
-                      if (fieldErrors.fullName) {
-                        setFieldErrors((prev) => ({ ...prev, fullName: validateField("fullName", event.target.value) }));
-                      }
-                    }}
-                    placeholder="Your full name"
-                  />
-                  {fieldErrors.fullName && <span className="field-error-text">{fieldErrors.fullName}</span>}
-                </label>
+            {/* STEP 1: Quick Personal Information */}
+            {step === 0 && (
+              <section className="step-panel panel-enter">
+                <p className="eyebrow">01 / About You</p>
+                <h2>Start your journey with VVLF.</h2>
+                <p className="step-intro">
+                  Tell us a bit about who you are. This helps us customize opportunities and support for your campus and year.
+                </p>
 
-                <label>
-                  College *
-                  <input
-                    className={fieldErrors.college ? "input-invalid" : ""}
-                    value={form.college}
-                    onChange={(event) => {
-                      update("college", event.target.value);
-                      if (fieldErrors.college) {
-                        setFieldErrors((prev) => ({ ...prev, college: validateField("college", event.target.value) }));
-                      }
-                    }}
-                    placeholder="College or university"
-                  />
-                  {fieldErrors.college && <span className="field-error-text">{fieldErrors.college}</span>}
-                </label>
-
-                <label>
-                  Department / branch *
-                  <input
-                    className={fieldErrors.department ? "input-invalid" : ""}
-                    value={form.department}
-                    onChange={(event) => {
-                      update("department", event.target.value);
-                      if (fieldErrors.department) {
-                        setFieldErrors((prev) => ({ ...prev, department: validateField("department", event.target.value) }));
-                      }
-                    }}
-                    placeholder="For example, CSE or ECE"
-                  />
-                  {fieldErrors.department && <span className="field-error-text">{fieldErrors.department}</span>}
-                </label>
-
-                <label>
-                  Current year *
-                  <select
-                    className={fieldErrors.studyYear ? "input-invalid" : ""}
-                    value={form.studyYear}
-                    onChange={(event) => {
-                      const yr = event.target.value as FormState["studyYear"];
-                      update("studyYear", yr);
-                      if (fieldErrors.studyYear) {
-                        setFieldErrors((prev) => ({ ...prev, studyYear: validateField("studyYear", yr) }));
-                      }
-                    }}
-                  >
-                    <option value="">Choose one</option>
-                    <option>1st Year</option>
-                    <option>2nd Year</option>
-                    <option>3rd Year</option>
-                    <option>4th Year</option>
-                  </select>
-                  {fieldErrors.studyYear && <span className="field-error-text">{fieldErrors.studyYear}</span>}
-                </label>
-
-                <label>
-                  WhatsApp number *
-                  <input
-                    className={fieldErrors.whatsapp ? "input-invalid" : ""}
-                    value={form.whatsapp}
-                    maxLength={10}
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    onChange={(event) => {
-                      const digitsOnly = event.target.value.replace(/\D/g, "").slice(0, 10);
-                      update("whatsapp", digitsOnly);
-                      if (fieldErrors.whatsapp) {
-                        setFieldErrors((prev) => ({ ...prev, whatsapp: validateField("whatsapp", digitsOnly) }));
-                      }
-                    }}
-                    placeholder="10-digit mobile number"
-                  />
-                  <div className="field-hint-text">
-                    {fieldErrors.whatsapp ? (
-                      <span className="field-error-text" style={{ margin: 0 }}>{fieldErrors.whatsapp}</span>
-                    ) : (
-                      <span>10 digits only</span>
-                    )}
-                    <span>{form.whatsapp.length}/10</span>
+                <div className="no-startup-idea-hero-banner">
+                  <div className="no-idea-icon-pill">
+                    <Sparkles size={20} />
                   </div>
-                </label>
+                  <div className="no-idea-text">
+                    <strong>NO STARTUP IDEA REQUIRED.</strong>
+                    <p>
+                      You do not need a startup, business idea, previous entrepreneurship experience, or advanced skills to apply.
+                    </p>
+                  </div>
+                </div>
 
-                <label>
-                  Email address *
-                  <input
-                    className={fieldErrors.email ? "input-invalid" : ""}
-                    value={form.email}
-                    type="email"
-                    onChange={(event) => {
-                      update("email", event.target.value);
-                      if (fieldErrors.email) {
-                        setFieldErrors((prev) => ({ ...prev, email: validateField("email", event.target.value) }));
-                      }
-                    }}
-                    placeholder="you@example.com"
-                  />
-                  {fieldErrors.email && <span className="field-error-text">{fieldErrors.email}</span>}
-                </label>
-              </div>
-
-              <fieldset className="track-fieldset">
-                <legend>Which focus track feels most exciting to you? *</legend>
-                {fieldErrors.track && <span className="field-error-text" style={{ marginBottom: "8px" }}>{fieldErrors.track}</span>}
-                <div className="track-grid">
-                  {tracks.map((track) => (
-                    <button
-                      type="button"
-                      className={`track-card ${form.track === track.id ? "selected" : ""}`}
-                      onClick={() => {
-                        update("track", track.id);
-                        update("tools", []);
-                        update("focus", "");
-                        if (fieldErrors.track) {
-                          setFieldErrors((prev) => ({ ...prev, track: "" }));
+                <div className="field-grid">
+                  <label>
+                    Full Name *
+                    <input
+                      className={fieldErrors.fullName ? "input-invalid" : ""}
+                      value={form.fullName}
+                      onChange={(e) => {
+                        update("fullName", e.target.value);
+                        if (fieldErrors.fullName) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            fullName: validateField("fullName", e.target.value),
+                          }));
                         }
                       }}
-                      key={track.id}
+                      placeholder="e.g. Rahul Sharma"
+                    />
+                    {fieldErrors.fullName && (
+                      <span className="field-error-text">{fieldErrors.fullName}</span>
+                    )}
+                  </label>
+
+                  <label>
+                    College / University *
+                    <select
+                      className={fieldErrors.college ? "input-invalid" : ""}
+                      value={form.college}
+                      onChange={(e) => {
+                        update("college", e.target.value);
+                        if (fieldErrors.college) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            college: validateField("college", e.target.value),
+                          }));
+                        }
+                      }}
                     >
-                      <span className="track-index">{form.track === track.id ? <Check size={15} /> : "→"}</span>
-                      <strong>{track.id}</strong>
-                      <small>{track.summary}</small>
+                      {POPULAR_COLLEGES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                    {fieldErrors.college && (
+                      <span className="field-error-text">{fieldErrors.college}</span>
+                    )}
+                  </label>
+
+                  <label>
+                    Department / Branch *
+                    <input
+                      className={fieldErrors.department ? "input-invalid" : ""}
+                      value={form.department}
+                      onChange={(e) => {
+                        update("department", e.target.value);
+                        if (fieldErrors.department) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            department: validateField("department", e.target.value),
+                          }));
+                        }
+                      }}
+                      placeholder="e.g. CSE, ECE, IT, AIDS, Mechanical..."
+                    />
+                    {fieldErrors.department && (
+                      <span className="field-error-text">{fieldErrors.department}</span>
+                    )}
+                  </label>
+
+                  <label>
+                    Year of Study *
+                    <select
+                      className={fieldErrors.studyYear ? "input-invalid" : ""}
+                      value={form.studyYear}
+                      onChange={(e) => {
+                        update("studyYear", e.target.value as any);
+                        if (fieldErrors.studyYear) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            studyYear: validateField("studyYear", e.target.value),
+                          }));
+                        }
+                      }}
+                    >
+                      {STUDY_YEARS.map((yr) => (
+                        <option key={yr} value={yr}>
+                          {yr}
+                        </option>
+                      ))}
+                    </select>
+                    {fieldErrors.studyYear && (
+                      <span className="field-error-text">{fieldErrors.studyYear}</span>
+                    )}
+                  </label>
+
+                  <label>
+                    WhatsApp Number *
+                    <input
+                      className={fieldErrors.whatsapp ? "input-invalid" : ""}
+                      value={form.whatsapp}
+                      maxLength={10}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        update("whatsapp", digits);
+                        if (fieldErrors.whatsapp) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            whatsapp: validateField("whatsapp", digits),
+                          }));
+                        }
+                      }}
+                      placeholder="10-digit mobile number"
+                    />
+                    <div className="field-hint-text">
+                      {fieldErrors.whatsapp ? (
+                        <span className="field-error-text" style={{ margin: 0 }}>
+                          {fieldErrors.whatsapp}
+                        </span>
+                      ) : (
+                        <span>For direct updates &amp; invitations</span>
+                      )}
+                      <span>{form.whatsapp.length}/10</span>
+                    </div>
+                  </label>
+
+                  <label>
+                    Email Address *
+                    <input
+                      className={fieldErrors.email ? "input-invalid" : ""}
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => {
+                        update("email", e.target.value);
+                        if (fieldErrors.email) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            email: validateField("email", e.target.value),
+                          }));
+                        }
+                      }}
+                      placeholder="you@example.com"
+                    />
+                    {fieldErrors.email && (
+                      <span className="field-error-text">{fieldErrors.email}</span>
+                    )}
+                  </label>
+                </div>
+              </section>
+            )}
+
+            {/* STEP 2: Choose What Interests You */}
+            {step === 1 && (
+              <section className="step-panel panel-enter">
+                <p className="eyebrow">02 / What do you want to work on?</p>
+                <h2>Choose the area that sounds most interesting.</h2>
+                <p className="step-intro">
+                  Pick what you're curious about. You do not need prior experience to join.
+                </p>
+
+                {/* Optional Quick Search */}
+                <div className="search-pill-container">
+                  <div className="search-input-wrapper">
+                    <Search size={16} style={{ color: "#64748b" }} />
+                    <input
+                      value={searchQuery}
+                      onChange={(e) => handleSearchFilter(e.target.value)}
+                      placeholder="Looking for something specific? (e.g. Motion Graphics, React, AI, Events...)"
+                    />
+                  </div>
+                  <div className="quick-search-tags">
+                    <small>Quick filters:</small>
+                    {["React / Web", "Motion Graphics", "AI / Automation", "Startup Research", "Canva / Figma", "Social Growth"].map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        className="tag-btn"
+                        onClick={() => handleSearchFilter(t)}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 5 Primary Opportunity Cards */}
+                <div className="category-cards-grid">
+                  {CATEGORIES.map((cat) => {
+                    const IconComponent = cat.icon;
+                    const isSelected = form.category === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        className={`category-card ${isSelected ? "selected" : ""}`}
+                        onClick={() => {
+                          update("category", cat.id);
+                          trackFunnelEvent("category_selected", { category: cat.id });
+                          if (fieldErrors.category) {
+                            setFieldErrors((prev) => ({ ...prev, category: "" }));
+                          }
+                        }}
+                      >
+                        <div className="category-card-top">
+                          <span className="category-icon">
+                            <IconComponent size={24} style={{ color: isSelected ? "#2563eb" : "#475569" }} />
+                          </span>
+                          <span className="category-check-indicator">
+                            <Check size={14} strokeWidth={3} />
+                          </span>
+                        </div>
+                        <h3>{cat.title}</h3>
+                        <span className="category-tags">{cat.tagline}</span>
+                        <p>{cat.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Secondary Category Option */}
+                <div className="secondary-category-box">
+                  <div
+                    className="secondary-category-header"
+                    onClick={() => setShowSecondarySelect(!showSecondarySelect)}
+                  >
+                    <p>Interested in more than one area? (Optional)</p>
+                    <span style={{ fontSize: "12px", color: "#2563eb", fontWeight: 700 }}>
+                      {showSecondarySelect ? "Hide ▲" : "Select secondary ▼"}
+                    </span>
+                  </div>
+                  {showSecondarySelect && (
+                    <div className="secondary-chips">
+                      {CATEGORIES.filter((c) => c.id !== form.category).map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          className={`secondary-chip ${form.secondaryCategory === c.id ? "selected" : ""}`}
+                          onClick={() => {
+                            const newSec = form.secondaryCategory === c.id ? "" : c.id;
+                            update("secondaryCategory", newSec);
+                            if (newSec) trackFunnelEvent("secondary_category_selected", { secondary: newSec });
+                          }}
+                        >
+                          {c.title}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Category Work Areas */}
+                <fieldset className="choice-fieldset">
+                  <legend>What would you enjoy doing in {activeCategory.id}? (Select any)</legend>
+                  <div className="skills-chip-grid">
+                    {activeCategory.workAreas.map((area) => {
+                      const isSelected = form.workAreas.includes(area);
+                      return (
+                        <button
+                          key={area}
+                          type="button"
+                          className={`skill-chip ${isSelected ? "selected" : ""}`}
+                          onClick={() => toggleWorkArea(area)}
+                        >
+                          {isSelected ? <Check size={14} /> : "+"} {area}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+
+                {/* Specific Skills Chips */}
+                <fieldset className="choice-fieldset">
+                  <legend>Select relevant skills or tools (Select all that apply) *</legend>
+                  {fieldErrors.skills && (
+                    <span className="field-error-text" style={{ marginBottom: 8 }}>
+                      {fieldErrors.skills}
+                    </span>
+                  )}
+                  <div className="skills-chip-grid">
+                    {activeCategory.skills.map((skill) => {
+                      const isSelected = form.skills.includes(skill);
+                      const isLearning = skill === "I’m still learning";
+                      return (
+                        <button
+                          key={skill}
+                          type="button"
+                          className={`skill-chip ${isSelected ? "selected" : ""} ${isLearning ? "skill-chip-learning" : ""}`}
+                          onClick={() => toggleSkill(skill)}
+                        >
+                          {isSelected ? <Check size={14} /> : "+"} {skill}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+
+                <div className="trust-line" style={{ marginTop: 24 }}>
+                  <Lightbulb size={17} />
+                  <span>
+                    <strong>New to this? That's completely okay.</strong> You can apply even if you're still learning. No prior startup experience required.
+                  </span>
+                </div>
+              </section>
+            )}
+
+            {/* STEP 3: Proof of Work & Availability */}
+            {step === 2 && (
+              <section className="step-panel panel-enter">
+                <p className="eyebrow">03 / Proof of Work &amp; Availability</p>
+                <h2>Show us something you've built.</h2>
+                <p className="step-intro">
+                  A portfolio isn't required, but relevant proof of work helps us understand your strengths and current experience.
+                </p>
+
+                {/* Dynamic Proof of Work Card */}
+                <div className="pow-card">
+                  <div className="pow-header">
+                    <div className="pow-header-icon">
+                      <LinkIcon size={18} />
+                    </div>
+                    <div>
+                      <h3>Proof of Work (Optional)</h3>
+                      <p>Share a link to something you've worked on, designed, coded, or written.</p>
+                    </div>
+                  </div>
+
+                  <div className="pow-dynamic-examples-badge">
+                    <Zap size={14} />
+                    <span>
+                      <strong>Suggested for {activeCategory.id}:</strong> {activeCategory.proofOfWorkExamples}
+                    </span>
+                  </div>
+
+                  {!form.noWorkToShare ? (
+                    <div className="pow-inputs">
+                      <label className="link-label" style={{ margin: 0 }}>
+                        Project or Profile Link
+                        <input
+                          value={form.proofOfWorkLink}
+                          onChange={(e) => update("proofOfWorkLink", e.target.value)}
+                          placeholder={activeCategory.linkPlaceholder}
+                        />
+                      </label>
+
+                      {showLink2 ? (
+                        <label className="link-label" style={{ margin: 0 }}>
+                          Additional Link (Optional)
+                          <input
+                            value={form.proofOfWorkLink2}
+                            onChange={(e) => update("proofOfWorkLink2", e.target.value)}
+                            placeholder="https://..."
+                          />
+                        </label>
+                      ) : (
+                        <button
+                          type="button"
+                          className="text-button"
+                          style={{ margin: 0, padding: 0, alignSelf: "flex-start", background: "none", color: "#2563eb", fontSize: "12px", fontWeight: 700 }}
+                          onClick={() => setShowLink2(true)}
+                        >
+                          + Add a second link
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 10 }}>
+                      <label className="custom-label">
+                        Tell us what you'd like to learn or build at VVLF:
+                        <input
+                          className="custom-textarea"
+                          value={form.learningInterest}
+                          onChange={(e) => update("learningInterest", e.target.value)}
+                          placeholder="e.g. I want to build AI agents, master Figma UI design, or learn startup research..."
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                  <label className="pow-no-work-toggle">
+                    <input
+                      type="checkbox"
+                      checked={form.noWorkToShare}
+                      onChange={(e) => {
+                        update("noWorkToShare", e.target.checked);
+                        if (e.target.checked) {
+                          trackFunnelEvent("proof_of_work_skipped");
+                        } else {
+                          trackFunnelEvent("proof_of_work_provided");
+                        }
+                      }}
+                    />
+                    <span>I don't have anything to share yet (That's completely fine!)</span>
+                  </label>
+                </div>
+
+                {/* Availability Section */}
+                <fieldset className="choice-fieldset">
+                  <legend>How much time can you realistically contribute each week?</legend>
+                  <div className="choice-grid">
+                    {AVAILABILITY_HOURS.map((hours) => (
+                      <button
+                        key={hours}
+                        type="button"
+                        className={`choice-card ${form.availabilityHours === hours ? "selected" : ""}`}
+                        onClick={() => update("availabilityHours", hours)}
+                      >
+                        {hours}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <fieldset className="choice-fieldset">
+                  <legend>How long can you contribute?</legend>
+                  <div className="choice-grid">
+                    {AVAILABILITY_DURATIONS.map((dur) => (
+                      <button
+                        key={dur}
+                        type="button"
+                        className={`choice-card ${form.availabilityDuration === dur ? "selected" : ""}`}
+                        onClick={() => update("availabilityDuration", dur)}
+                      >
+                        {dur}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <fieldset className="choice-fieldset">
+                  <legend>When can you start?</legend>
+                  <div className="choice-grid">
+                    {START_TIMELINES.map((tl) => (
+                      <button
+                        key={tl}
+                        type="button"
+                        className={`choice-card ${form.startTimeline === tl ? "selected" : ""}`}
+                        onClick={() => update("startTimeline", tl)}
+                      >
+                        {tl}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+
+                {/* Motivation Chips */}
+                <fieldset className="choice-fieldset">
+                  <legend>What are you hoping to get from VVLF? (Select all that apply)</legend>
+                  <div className="skills-chip-grid">
+                    {MOTIVATION_GOALS.map((goal) => {
+                      const isSelected = form.goals.includes(goal);
+                      return (
+                        <button
+                          key={goal}
+                          type="button"
+                          className={`skill-chip ${isSelected ? "selected" : ""}`}
+                          onClick={() => toggleGoal(goal)}
+                        >
+                          {isSelected ? <Check size={14} /> : "+"} {goal}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+
+                {/* Optional Contribution */}
+                <div style={{ marginTop: 24 }}>
+                  <label className="custom-label">
+                    What would you like to contribute to VVLF? (Optional · Max 200 chars)
+                    <input
+                      className="custom-textarea"
+                      maxLength={200}
+                      value={form.contribution}
+                      onChange={(e) => update("contribution", e.target.value)}
+                      placeholder="e.g. I can help build frontend UI, edit short videos, or write tech guides..."
+                    />
+                    <div className="field-hint-text">
+                      <span>Briefly describe your enthusiasm or niche strengths</span>
+                      <span>{form.contribution.length}/200</span>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Compact Application Review Box */}
+                <div className="review-card">
+                  <div className="review-card-header">
+                    <strong>Application Summary</strong>
+                    <button type="button" className="edit-btn" onClick={() => setStep(1)}>
+                      Edit Interests
                     </button>
-                  ))}
+                  </div>
+                  <div className="review-row">
+                    <span>Applicant</span>
+                    <span>{form.fullName || "—"} ({form.studyYear})</span>
+                  </div>
+                  <div className="review-row">
+                    <span>Primary Area</span>
+                    <span>{form.category}</span>
+                  </div>
+                  <div className="review-row">
+                    <span>Selected Skills</span>
+                    <span>{form.skills.length > 0 ? form.skills.join(", ") : "Still learning"}</span>
+                  </div>
+                  <div className="review-row">
+                    <span>Weekly Commitment</span>
+                    <span>{form.availabilityHours}</span>
+                  </div>
                 </div>
-              </fieldset>
-            </section>}
 
-            {step === 1 && currentTrack && <section className="step-panel panel-enter">
-              <p className="eyebrow">02 / Your working style</p>
-              <h2>{currentTrack.id} is a great place to start.</h2>
-              <p className="step-intro">You do not need to be an expert. We are more interested in the tools you are curious about and the way you approach a new challenge.</p>
-              <fieldset className="choice-fieldset">
-                <legend>What tools do you currently use or want to learn? *</legend>
-                {fieldErrors.tools && <span className="field-error-text" style={{ marginBottom: "8px" }}>{fieldErrors.tools}</span>}
-                <div className="choice-grid">
-                  {currentTrack.tools.map((tool) => <button className={`choice-card ${form.tools.includes(tool) ? "selected" : ""}`} type="button" onClick={() => toggleTool(tool)} key={tool}><span>{form.tools.includes(tool) ? <Check size={15} /> : "+"}</span>{tool}</button>)}
-                </div>
-              </fieldset>
-              <fieldset className="choice-fieldset">
-                <legend>{currentTrack.focusPrompt} *</legend>
-                {fieldErrors.focus && <span className="field-error-text" style={{ marginBottom: "8px" }}>{fieldErrors.focus}</span>}
-                <div className="focus-list">
-                  {currentTrack.focus.map((focus) => <button className={`focus-choice ${form.focus === focus ? "selected" : ""}`} type="button" onClick={() => { update("focus", focus); if (fieldErrors.focus) setFieldErrors((prev) => ({ ...prev, focus: "" })); }} key={focus}><span className="radio-dot" />{focus}</button>)}
-                </div>
-              </fieldset>
-              <label className="link-label">Optional sample or portfolio link<input value={form.portfolioLink} onChange={(event) => update("portfolioLink", event.target.value)} placeholder="https://..." /><small>{currentTrack.linkHint} No link? Leave it blank.</small></label>
-            </section>}
+                {/* Consent Checkbox */}
+                <label className="consent">
+                  <input
+                    type="checkbox"
+                    required
+                    checked={form.consent}
+                    onChange={(e) => {
+                      update("consent", e.target.checked);
+                      if (fieldErrors.consent) {
+                        setFieldErrors((prev) => ({ ...prev, consent: "" }));
+                      }
+                    }}
+                  />
+                  <span>
+                    <strong>Privacy notice and consent *</strong>
+                    <br />
+                    I confirm that my details are accurate. I agree that VVLF may securely use my contact details solely to review my application and communicate regarding the Student Builder Program.
+                  </span>
+                </label>
+                {fieldErrors.consent && (
+                  <span className="field-error-text" style={{ marginLeft: 8 }}>
+                    {fieldErrors.consent}
+                  </span>
+                )}
+              </section>
+            )}
 
-            {step === 2 && <section className="step-panel panel-enter">
-              <p className="eyebrow">03 / One final check</p>
-              <h2>Tell us what you hope to take forward.</h2>
-              <p className="step-intro">These last answers help VVLF understand the kind of growth and support that will be most useful to you.</p>
-              <fieldset className="choice-fieldset">
-                <legend>What is your primary goal for joining this track? *</legend>
-                {fieldErrors.goal && <span className="field-error-text" style={{ marginBottom: "8px" }}>{fieldErrors.goal}</span>}
-                <div className="focus-list">
-                  {["Build real projects to boost my resume", "Learn modern tools & AI workflows", "Gain leadership & event experience", "Connect with peers and mentors"].map((goal) => <button className={`focus-choice ${form.goal === goal ? "selected" : ""}`} type="button" onClick={() => { update("goal", goal as FormState["goal"]); if (fieldErrors.goal) setFieldErrors((prev) => ({ ...prev, goal: "" })); }} key={goal}><span className="radio-dot" />{goal}</button>)}
-                </div>
-              </fieldset>
-              <fieldset className="choice-fieldset">
-                <legend>Workstation access *</legend>
-                {fieldErrors.workstation && <span className="field-error-text" style={{ marginBottom: "8px" }}>{fieldErrors.workstation}</span>}
-                <div className="choice-grid two-up">
-                  {["I have my own personal laptop", "I will use campus systems and foundation labs"].map((workstation) => <button className={`choice-card ${form.workstation === workstation ? "selected" : ""}`} type="button" onClick={() => { update("workstation", workstation as FormState["workstation"]); if (fieldErrors.workstation) setFieldErrors((prev) => ({ ...prev, workstation: "" })); }} key={workstation}><span>{form.workstation === workstation ? <Check size={15} /> : "+"}</span>{workstation}</button>)}
-                </div>
-              </fieldset>
-              <label className="consent"><input type="checkbox" required checked={form.consent} onChange={(event) => { update("consent", event.target.checked); if (fieldErrors.consent) setFieldErrors((prev) => ({ ...prev, consent: "" })); }} /><span><strong>Privacy notice and consent *</strong><br />I confirm that my information is accurate. I agree that VVLF may securely use my contact and application details only to review this application, communicate about the program, and manage the selection process.</span></label>
-              {fieldErrors.consent && <span className="field-error-text" style={{ margin: "4px 0 0 15px" }}>{fieldErrors.consent}</span>}
-              <div className="support-detail"><img src={WORKBENCH_IMAGE} alt="Student project workbench" /><p><strong>What happens next?</strong> After submission, your application is saved for the VVLF team. If your profile fits the next stage, they will use the contact details you provided.</p></div>
-            </section>}
-
-            {error && <p className="form-error" role="alert">{error}</p>}
+            {error && (
+              <div className="form-error" role="alert">
+                {error}
+              </div>
+            )}
           </div>
 
           <footer className="form-footer">
-            <button className="secondary-action" type="button" disabled={step === 0 || submitApplication.isPending} onClick={() => { setError(""); setStep((current) => Math.max(0, current - 1)); }}><ArrowLeft size={17} /> Back</button>
-            {step < 2 ? <button className="primary-action" type="button" onClick={nextStep}>Continue <ArrowRight size={17} /></button> : <button className="primary-action" type="button" disabled={submitApplication.isPending} onClick={submit}>{submitApplication.isPending ? "Saving application…" : "Submit application"} {!submitApplication.isPending && <ArrowRight size={17} />}</button>}
+            <button
+              className="secondary-action"
+              type="button"
+              disabled={step === 0 || submitApplication.isPending}
+              onClick={prevStep}
+            >
+              <ArrowLeft size={16} /> Back
+            </button>
+
+            {step < 2 ? (
+              <button className="primary-action" type="button" onClick={nextStep}>
+                Continue <ArrowRight size={16} />
+              </button>
+            ) : (
+              <button
+                className="primary-action"
+                type="button"
+                disabled={submitApplication.isPending}
+                onClick={submit}
+              >
+                {submitApplication.isPending ? "Submitting Application…" : "Submit Application"}{" "}
+                {!submitApplication.isPending && <ArrowRight size={16} />}
+              </button>
+            )}
           </footer>
         </section>
       </div>
+
+      {/* About VVLF Modal */}
       <Dialog open={aboutOpen} onOpenChange={setAboutOpen}>
         <DialogContent className="vvlf-about-dialog">
           <DialogHeader className="vvlf-about-header">
-            <div className="vvlf-about-brand"><img src={CAPTION_LOGO} alt="" aria-hidden="true" /><span>VVLF / Incubation Center</span></div>
-            <DialogTitle className="vvlf-about-title">From campus curiosity to real-world impact.</DialogTitle>
-            <DialogDescription className="vvlf-about-copy">Vishnu Venture Labs Foundation is the B V Raju Institute of Technology Narsapur incubation center, helping early-stage innovators turn ideas into meaningful ventures through infrastructure, mentorship, and industry networks.</DialogDescription>
+            <div className="vvlf-about-brand">
+              <img src={CAPTION_LOGO} alt="" aria-hidden="true" />
+              <span>VVLF / Incubation Ecosystem</span>
+            </div>
+            <DialogTitle className="vvlf-about-title">
+              From campus curiosity to real-world ventures.
+            </DialogTitle>
+            <DialogDescription className="vvlf-about-copy">
+              Vishnu Venture Labs Foundation (VVLF) is the premier incubation center at BVRIT Narsapur, enabling students and early-stage innovators to build real products, launch startups, and master high-demand skills across engineering, design, and venture building.
+            </DialogDescription>
           </DialogHeader>
-          <div className="vvlf-about-points" aria-label="Ways VVLF can help">
-            <span>Validate ideas</span><span>Build prototypes</span><span>Meet mentors</span>
+
+          <div className="vvlf-about-points" aria-label="VVLF Pillars">
+            <span>🚀 Venture Scouting</span>
+            <span>💻 Full-Stack &amp; AI</span>
+            <span>🎨 Brand &amp; Media</span>
+            <span>📈 Growth &amp; Community</span>
           </div>
+
           <DialogFooter className="vvlf-about-actions">
-            <DialogClose asChild><button className="about-secondary-action" type="button">Continue application</button></DialogClose>
-            <a className="about-primary-link" href={VVLF_WEBSITE_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackCaptionEngagement("vvlf_website_visit")}>Explore VVLF <ExternalLink size={15} aria-hidden="true" /></a>
+            <DialogClose asChild>
+              <button className="about-secondary-action" type="button">
+                Continue Application
+              </button>
+            </DialogClose>
+            <a
+              className="about-primary-link"
+              href={VVLF_WEBSITE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Explore VVLF Website <ExternalLink size={14} aria-hidden="true" />
+            </a>
           </DialogFooter>
         </DialogContent>
       </Dialog>

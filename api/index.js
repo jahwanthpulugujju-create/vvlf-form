@@ -868,24 +868,70 @@ var systemRouter = router({
 
 // server/application.ts
 import { z as z2 } from "zod";
-var trackOptions = [
-  "Design & Visuals",
-  "Video & Media",
-  "Tech & Web",
-  "Content & Events",
-  "Fast Learner / Generalist"
-];
+
+// shared/roleRecommendation.ts
+function recommendInternalRole(input) {
+  const { category, workAreas = [], skills = [] } = input;
+  const combinedText = [...workAreas, ...skills].join(" ").toLowerCase();
+  switch (category) {
+    case "Technology & Product": {
+      if (combinedText.includes("ai") || combinedText.includes("llm") || combinedText.includes("automation") || combinedText.includes("python")) {
+        return "AI & Automation Engineering Intern";
+      }
+      return "Digital Product & Full-Stack Engineering Intern";
+    }
+    case "Creative & Media": {
+      if (combinedText.includes("motion graphics") || combinedText.includes("after effects") || combinedText.includes("video editing") || combinedText.includes("premiere") || combinedText.includes("davinci")) {
+        return "Video, Motion & Post-Production Intern";
+      }
+      if (combinedText.includes("photography") || combinedText.includes("cinematic") || combinedText.includes("audio") || combinedText.includes("camera")) {
+        return "Cinematic Media Production Intern";
+      }
+      return "Creative Brand & Visual Communications Intern";
+    }
+    case "Startups & Business": {
+      if (combinedText.includes("commercial") || combinedText.includes("institutional") || combinedText.includes("sponsorship") || combinedText.includes("business development")) {
+        return "Commercial & Institutional Partnerships Intern";
+      }
+      if (combinedText.includes("partnerships") || combinedText.includes("ecosystem") || combinedText.includes("events") || combinedText.includes("networking")) {
+        return "Strategic Partnerships & Ecosystem Intern";
+      }
+      if (combinedText.includes("market research") || combinedText.includes("startup research") || combinedText.includes("competitive research")) {
+        return "Venture Scouting & Market Research Intern";
+      }
+      return "Venture Intelligence & Strategy Intern";
+    }
+    case "Content & Community": {
+      if (combinedText.includes("social media") || combinedText.includes("instagram") || combinedText.includes("short-form") || combinedText.includes("reels")) {
+        return "Short-Form & Social Media Growth Intern";
+      }
+      if (combinedText.includes("community") || combinedText.includes("founder success") || combinedText.includes("peer outreach")) {
+        return "Founder Success & Community Intern";
+      }
+      return "Content, Growth & Distribution Intern";
+    }
+    case "Explore & Build": {
+      if (combinedText.includes("technology") || combinedText.includes("coding") || combinedText.includes("ai")) {
+        return "Digital Product & Full-Stack Engineering Intern";
+      }
+      if (combinedText.includes("design") || combinedText.includes("video") || combinedText.includes("media")) {
+        return "Creative Brand & Visual Communications Intern";
+      }
+      if (combinedText.includes("startups") || combinedText.includes("business") || combinedText.includes("research")) {
+        return "Venture Scouting & Market Research Intern";
+      }
+      if (combinedText.includes("content") || combinedText.includes("social") || combinedText.includes("community")) {
+        return "Founder Success & Community Intern";
+      }
+      return "Founder Success & Community Intern";
+    }
+    default:
+      return "Founder Success & Community Intern";
+  }
+}
+
+// server/application.ts
 var studyYearOptions = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
-var goalOptions = [
-  "Build real projects to boost my resume",
-  "Learn modern tools & AI workflows",
-  "Gain leadership & event experience",
-  "Connect with peers and mentors"
-];
-var workstationOptions = [
-  "I have my own personal laptop",
-  "I will use campus systems and foundation labs"
-];
 var applicationInputSchema = z2.object({
   fullName: z2.string().trim().min(2, "Please enter your full name.").max(150),
   college: z2.string().trim().min(2, "Please enter your college name.").max(200),
@@ -893,14 +939,66 @@ var applicationInputSchema = z2.object({
   studyYear: z2.enum(studyYearOptions),
   whatsapp: z2.string().trim().regex(/^\d{10}$/, "WhatsApp number must be exactly 10 digits (numbers only)."),
   email: z2.string().trim().email("Please enter a valid email address.").max(320),
-  track: z2.enum(trackOptions),
-  tools: z2.array(z2.string().trim().min(1).max(100)).min(1, "Choose at least one capability.").max(6),
-  focus: z2.string().trim().min(2, "Choose the answer that fits you best.").max(220),
-  portfolioLink: z2.union([z2.literal(""), z2.string().url("Use a complete https:// link.").max(1e3)]),
-  goal: z2.enum(goalOptions),
-  workstation: z2.enum(workstationOptions),
-  consent: z2.literal(true, { error: "Please confirm the consent statement before submitting." })
+  // Category / Track selection
+  category: z2.string().trim().min(1, "Please select an interest category."),
+  secondaryCategory: z2.string().trim().optional(),
+  // Detailed work areas and skills
+  workAreas: z2.array(z2.string().trim()).default([]),
+  skills: z2.array(z2.string().trim()).min(1, "Please select at least one skill or 'I\u2019m still learning'."),
+  // Proof of work
+  proofOfWorkLink: z2.string().trim().optional(),
+  proofOfWorkLink2: z2.string().trim().optional(),
+  noWorkToShare: z2.boolean().default(false),
+  learningInterest: z2.string().trim().max(300).optional(),
+  // Availability
+  availabilityHours: z2.string().trim().default("8\u201312 hours"),
+  availabilityDuration: z2.string().trim().default("6 months"),
+  startTimeline: z2.string().trim().default("Immediately"),
+  // Motivation & Contribution
+  goals: z2.array(z2.string().trim()).default([]),
+  contribution: z2.string().trim().max(300).optional(),
+  // Consent
+  consent: z2.literal(true, { error: "Please confirm the consent statement before submitting." }),
+  // Backward-compatible fields (optional in input, populated if missing)
+  track: z2.string().trim().optional(),
+  tools: z2.array(z2.string().trim()).optional(),
+  focus: z2.string().trim().optional(),
+  portfolioLink: z2.string().trim().optional(),
+  goal: z2.string().trim().optional(),
+  workstation: z2.string().trim().optional()
 });
+function enrichApplicationData(input) {
+  const category = input.category || input.track || "Explore & Build";
+  const skills = input.skills && input.skills.length > 0 ? input.skills : input.tools || ["I\u2019m still learning"];
+  const workAreas = input.workAreas || [];
+  const proofOfWorkLink = input.proofOfWorkLink || input.portfolioLink || "";
+  const recommendedRole = recommendInternalRole({
+    category,
+    secondaryCategory: input.secondaryCategory,
+    workAreas,
+    skills,
+    proofOfWorkLink,
+    learningInterest: input.learningInterest
+  });
+  return {
+    ...input,
+    category,
+    track: category,
+    skills,
+    tools: skills,
+    workAreas,
+    focus: workAreas.length > 0 ? workAreas.join(", ") : input.focus || "General exploration",
+    proofOfWorkLink,
+    portfolioLink: proofOfWorkLink || null,
+    availabilityHours: input.availabilityHours || "8\u201312 hours",
+    availabilityDuration: input.availabilityDuration || "6 months",
+    startTimeline: input.startTimeline || "Immediately",
+    goals: input.goals || (input.goal ? [input.goal] : ["Build real projects"]),
+    goal: input.goals && input.goals.length > 0 ? input.goals.join(", ") : input.goal || "Build real projects",
+    workstation: input.workstation || input.availabilityHours || "Personal laptop",
+    recommendedRole
+  };
+}
 
 // server/formStudio.ts
 import { z as z3 } from "zod";
@@ -959,12 +1057,32 @@ async function syncToGoogleSheets(data) {
     return { success: false, error: "GOOGLE_SHEET_WEBHOOK_URL is not configured" };
   }
   try {
+    const toolsArray = data.skills || data.tools || [];
+    const workAreasArray = data.workAreas || [];
+    const goalsArray = data.goals || (data.goal ? [data.goal] : []);
     const payload = {
       ...data,
-      submittedAt: data.submittedAt || (/* @__PURE__ */ new Date()).toISOString(),
-      toolsFormatted: Array.isArray(data.tools) ? data.tools.join(", ") : data.tools
+      category: data.category || data.track || "",
+      track: data.category || data.track || "",
+      secondaryCategory: data.secondaryCategory || "",
+      workAreas: workAreasArray,
+      workAreasFormatted: workAreasArray.join(", "),
+      skills: toolsArray,
+      tools: toolsArray,
+      toolsFormatted: toolsArray.join(", "),
+      proofOfWorkLink: data.proofOfWorkLink || data.portfolioLink || "",
+      proofOfWorkLink2: data.proofOfWorkLink2 || "",
+      portfolioLink: data.proofOfWorkLink || data.portfolioLink || "",
+      availabilityHours: data.availabilityHours || "8\u201312 hours",
+      availabilityDuration: data.availabilityDuration || "6 months",
+      startTimeline: data.startTimeline || "Immediately",
+      goalsFormatted: goalsArray.join(", "),
+      goal: goalsArray.join(", "),
+      contribution: data.contribution || "",
+      recommendedRole: data.recommendedRole || "VVLF Student Builder",
+      submittedAt: data.submittedAt || (/* @__PURE__ */ new Date()).toISOString()
     };
-    console.log(`[Google Sheets] Sending submission for "${data.fullName}" to Google Sheet...`);
+    console.log(`[Google Sheets] Sending submission for "${data.fullName}" (${payload.recommendedRole}) to Google Sheet...`);
     const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -990,6 +1108,9 @@ async function syncToExcelOnline(data) {
     return { success: false, error: "EXCEL_WEBHOOK_URL is not configured in .env" };
   }
   try {
+    const toolsArray = data.skills || data.tools || [];
+    const workAreasArray = data.workAreas || [];
+    const goalsArray = data.goals || (data.goal ? [data.goal] : []);
     const payload = {
       submittedAt: data.submittedAt || (/* @__PURE__ */ new Date()).toISOString(),
       fullName: data.fullName,
@@ -998,12 +1119,18 @@ async function syncToExcelOnline(data) {
       studyYear: data.studyYear,
       whatsapp: data.whatsapp,
       email: data.email,
-      track: data.track,
-      tools: Array.isArray(data.tools) ? data.tools.join(", ") : data.tools,
-      focus: data.focus,
-      portfolioLink: data.portfolioLink || "N/A",
-      goal: data.goal,
-      workstation: data.workstation,
+      category: data.category || data.track || "",
+      secondaryCategory: data.secondaryCategory || "N/A",
+      workAreas: workAreasArray.join(", "),
+      skills: toolsArray.join(", "),
+      proofOfWorkLink: data.proofOfWorkLink || data.portfolioLink || "N/A",
+      proofOfWorkLink2: data.proofOfWorkLink2 || "N/A",
+      availabilityHours: data.availabilityHours || "8\u201312 hours",
+      availabilityDuration: data.availabilityDuration || "6 months",
+      startTimeline: data.startTimeline || "Immediately",
+      goals: goalsArray.join(", "),
+      contribution: data.contribution || "N/A",
+      recommendedRole: data.recommendedRole || "N/A",
       consent: data.consent ? "Yes" : "No"
     };
     console.log(`[Excel Online] Sending submission for "${data.fullName}" to OneDrive Excel...`);
@@ -1068,20 +1195,38 @@ async function generateCsvString() {
     "Current Year",
     "WhatsApp Number",
     "Email Address",
-    "Focus Track",
-    "Tools & Capabilities",
-    "Focus / Approach",
-    "Portfolio / Project Link",
-    "Primary Goal",
-    "Workstation Access",
+    "Primary Category",
+    "Secondary Category",
+    "Work Areas",
+    "Skills & Capabilities",
+    "Proof of Work / Link 1",
+    "Proof of Work / Link 2",
+    "Availability Hours",
+    "Goals",
+    "Contribution Note",
+    "Recommended Internal Role",
     "Consent Confirmed"
   ];
   const rows = [headers.join(",")];
   for (const app2 of applications2) {
     let toolsText = "";
+    let secondaryCategory = "";
+    let workAreas = "";
+    let recommendedRole = "";
+    let learningInterest = "";
     try {
-      const parsed = JSON.parse(app2.tools || "[]");
-      toolsText = Array.isArray(parsed) ? parsed.join(", ") : String(parsed);
+      const parsed = JSON.parse(app2.tools || "{}");
+      if (typeof parsed === "object" && !Array.isArray(parsed)) {
+        toolsText = Array.isArray(parsed.skills) ? parsed.skills.join(", ") : "";
+        secondaryCategory = parsed.secondaryCategory || "";
+        workAreas = Array.isArray(parsed.workAreas) ? parsed.workAreas.join(", ") : "";
+        recommendedRole = parsed.recommendedRole || "";
+        learningInterest = parsed.learningInterest || "";
+      } else if (Array.isArray(parsed)) {
+        toolsText = parsed.join(", ");
+      } else {
+        toolsText = String(parsed);
+      }
     } catch {
       toolsText = app2.tools || "";
     }
@@ -1096,11 +1241,15 @@ async function generateCsvString() {
       escapeCsvField(app2.whatsapp),
       escapeCsvField(app2.email),
       escapeCsvField(app2.track),
+      escapeCsvField(secondaryCategory || "N/A"),
+      escapeCsvField(workAreas || app2.focus),
       escapeCsvField(toolsText),
-      escapeCsvField(app2.focus),
       escapeCsvField(app2.portfolioLink || "N/A"),
+      escapeCsvField("N/A"),
+      escapeCsvField(app2.workstation || "8\u201312 hours"),
       escapeCsvField(app2.goal),
-      escapeCsvField(app2.workstation),
+      escapeCsvField(learningInterest || "N/A"),
+      escapeCsvField(recommendedRole || "VVLF Student Builder"),
       escapeCsvField(app2.consent ? "Yes" : "No")
     ];
     rows.push(row.join(","));
@@ -1166,43 +1315,68 @@ var appRouter = router({
   application: router({
     submit: publicProcedure.input(applicationInputSchema).mutation(async ({ input }) => {
       try {
+        const enriched = enrichApplicationData(input);
         await createApplication({
-          fullName: input.fullName,
-          college: input.college,
-          department: input.department,
-          studyYear: input.studyYear,
-          whatsapp: input.whatsapp,
-          email: input.email,
-          track: input.track,
-          tools: JSON.stringify(input.tools),
-          focus: input.focus,
-          portfolioLink: input.portfolioLink || null,
-          goal: input.goal,
-          workstation: input.workstation,
-          consent: input.consent
+          fullName: enriched.fullName,
+          college: enriched.college,
+          department: enriched.department,
+          studyYear: enriched.studyYear,
+          whatsapp: enriched.whatsapp,
+          email: enriched.email,
+          track: enriched.category,
+          tools: JSON.stringify({
+            category: enriched.category,
+            secondaryCategory: enriched.secondaryCategory,
+            workAreas: enriched.workAreas,
+            skills: enriched.skills,
+            recommendedRole: enriched.recommendedRole,
+            learningInterest: enriched.learningInterest
+          }),
+          focus: enriched.focus,
+          portfolioLink: enriched.portfolioLink,
+          goal: enriched.goal,
+          workstation: enriched.workstation,
+          consent: enriched.consent
         });
         try {
           await syncAllSheets({
-            fullName: input.fullName,
-            college: input.college,
-            department: input.department,
-            studyYear: input.studyYear,
-            whatsapp: input.whatsapp,
-            email: input.email,
-            track: input.track,
-            tools: input.tools,
-            focus: input.focus,
-            portfolioLink: input.portfolioLink,
-            goal: input.goal,
-            workstation: input.workstation,
-            consent: input.consent
+            fullName: enriched.fullName,
+            college: enriched.college,
+            department: enriched.department,
+            studyYear: enriched.studyYear,
+            whatsapp: enriched.whatsapp,
+            email: enriched.email,
+            category: enriched.category,
+            secondaryCategory: enriched.secondaryCategory,
+            track: enriched.category,
+            workAreas: enriched.workAreas,
+            skills: enriched.skills,
+            tools: enriched.skills,
+            focus: enriched.focus,
+            proofOfWorkLink: enriched.proofOfWorkLink,
+            proofOfWorkLink2: enriched.proofOfWorkLink2,
+            portfolioLink: enriched.portfolioLink,
+            noWorkToShare: enriched.noWorkToShare,
+            learningInterest: enriched.learningInterest,
+            availabilityHours: enriched.availabilityHours,
+            availabilityDuration: enriched.availabilityDuration,
+            startTimeline: enriched.startTimeline,
+            goals: enriched.goals,
+            goal: enriched.goal,
+            contribution: enriched.contribution,
+            workstation: enriched.workstation,
+            recommendedRole: enriched.recommendedRole,
+            consent: enriched.consent
           });
         } catch (sheetsErr) {
           console.error("[Sheets Sync] Error:", sheetsErr);
         }
         updateLocalCsvFile().catch(() => {
         });
-        return { success: true };
+        return {
+          success: true,
+          recommendedRole: enriched.recommendedRole
+        };
       } catch (error) {
         console.error("[Application] Submission failed", error);
         throw new TRPCError3({

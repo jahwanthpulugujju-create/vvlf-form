@@ -1,25 +1,46 @@
 import { z } from "zod";
+import { recommendInternalRole, VVLF_INTERNAL_ROLES } from "@shared/roleRecommendation";
 
-export const trackOptions = [
-  "Design & Visuals",
-  "Video & Media",
-  "Tech & Web",
-  "Content & Events",
-  "Fast Learner / Generalist",
+export const categoryOptions = [
+  "Startups & Business",
+  "Technology & Product",
+  "Creative & Media",
+  "Content & Community",
+  "Explore & Build",
 ] as const;
 
 export const studyYearOptions = ["1st Year", "2nd Year", "3rd Year", "4th Year"] as const;
 
-export const goalOptions = [
-  "Build real projects to boost my resume",
-  "Learn modern tools & AI workflows",
-  "Gain leadership & event experience",
-  "Connect with peers and mentors",
+export const availabilityHoursOptions = [
+  "5–8 hours",
+  "8–12 hours",
+  "12–20 hours",
+  "20+ hours",
 ] as const;
 
-export const workstationOptions = [
-  "I have my own personal laptop",
-  "I will use campus systems and foundation labs",
+export const availabilityDurationOptions = [
+  "3 months",
+  "6 months",
+  "9 months",
+  "12+ months",
+] as const;
+
+export const startTimelineOptions = [
+  "Immediately",
+  "Within 2 weeks",
+  "Within 1 month",
+  "Other",
+] as const;
+
+export const motivationOptions = [
+  "Build real projects",
+  "Learn new skills",
+  "Work with startups",
+  "Build my portfolio",
+  "Meet founders and mentors",
+  "Work on media/content",
+  "Explore entrepreneurship",
+  "Gain practical experience",
 ] as const;
 
 export const applicationInputSchema = z.object({
@@ -32,16 +53,78 @@ export const applicationInputSchema = z.object({
     .trim()
     .regex(/^\d{10}$/, "WhatsApp number must be exactly 10 digits (numbers only)."),
   email: z.string().trim().email("Please enter a valid email address.").max(320),
-  track: z.enum(trackOptions),
-  tools: z.array(z.string().trim().min(1).max(100)).min(1, "Choose at least one capability.").max(6),
-  focus: z.string().trim().min(2, "Choose the answer that fits you best.").max(220),
-  portfolioLink: z.union([z.literal(""), z.string().url("Use a complete https:// link.").max(1000)]),
-  goal: z.enum(goalOptions),
-  workstation: z.enum(workstationOptions),
+  
+  // Category / Track selection
+  category: z.string().trim().min(1, "Please select an interest category."),
+  secondaryCategory: z.string().trim().optional(),
+  
+  // Detailed work areas and skills
+  workAreas: z.array(z.string().trim()).default([]),
+  skills: z.array(z.string().trim()).min(1, "Please select at least one skill or 'I’m still learning'."),
+  
+  // Proof of work
+  proofOfWorkLink: z.string().trim().optional(),
+  proofOfWorkLink2: z.string().trim().optional(),
+  noWorkToShare: z.boolean().default(false),
+  learningInterest: z.string().trim().max(300).optional(),
+  
+  // Availability
+  availabilityHours: z.string().trim().default("8–12 hours"),
+  availabilityDuration: z.string().trim().default("6 months"),
+  startTimeline: z.string().trim().default("Immediately"),
+  
+  // Motivation & Contribution
+  goals: z.array(z.string().trim()).default([]),
+  contribution: z.string().trim().max(300).optional(),
+  
+  // Consent
   consent: z.literal(true, { error: "Please confirm the consent statement before submitting." }),
+
+  // Backward-compatible fields (optional in input, populated if missing)
+  track: z.string().trim().optional(),
+  tools: z.array(z.string().trim()).optional(),
+  focus: z.string().trim().optional(),
+  portfolioLink: z.string().trim().optional(),
+  goal: z.string().trim().optional(),
+  workstation: z.string().trim().optional(),
 });
 
 export type ApplicationInput = z.infer<typeof applicationInputSchema>;
+
+export function enrichApplicationData(input: ApplicationInput) {
+  const category = input.category || input.track || "Explore & Build";
+  const skills = input.skills && input.skills.length > 0 ? input.skills : (input.tools || ["I’m still learning"]);
+  const workAreas = input.workAreas || [];
+  const proofOfWorkLink = input.proofOfWorkLink || input.portfolioLink || "";
+
+  const recommendedRole = recommendInternalRole({
+    category,
+    secondaryCategory: input.secondaryCategory,
+    workAreas,
+    skills,
+    proofOfWorkLink,
+    learningInterest: input.learningInterest,
+  });
+
+  return {
+    ...input,
+    category,
+    track: category,
+    skills,
+    tools: skills,
+    workAreas,
+    focus: workAreas.length > 0 ? workAreas.join(", ") : (input.focus || "General exploration"),
+    proofOfWorkLink,
+    portfolioLink: proofOfWorkLink || null,
+    availabilityHours: input.availabilityHours || "8–12 hours",
+    availabilityDuration: input.availabilityDuration || "6 months",
+    startTimeline: input.startTimeline || "Immediately",
+    goals: input.goals || (input.goal ? [input.goal] : ["Build real projects"]),
+    goal: input.goals && input.goals.length > 0 ? input.goals.join(", ") : (input.goal || "Build real projects"),
+    workstation: input.workstation || input.availabilityHours || "Personal laptop",
+    recommendedRole,
+  };
+}
 
 export function isSafeRedirectUrl(value: string) {
   try {

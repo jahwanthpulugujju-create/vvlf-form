@@ -37,12 +37,16 @@ export async function generateCsvString(): Promise<string> {
     "Current Year",
     "WhatsApp Number",
     "Email Address",
-    "Focus Track",
-    "Tools & Capabilities",
-    "Focus / Approach",
-    "Portfolio / Project Link",
-    "Primary Goal",
-    "Workstation Access",
+    "Primary Category",
+    "Secondary Category",
+    "Work Areas",
+    "Skills & Capabilities",
+    "Proof of Work / Link 1",
+    "Proof of Work / Link 2",
+    "Availability Hours",
+    "Goals",
+    "Contribution Note",
+    "Recommended Internal Role",
     "Consent Confirmed",
   ];
 
@@ -50,9 +54,24 @@ export async function generateCsvString(): Promise<string> {
 
   for (const app of applications) {
     let toolsText = "";
+    let secondaryCategory = "";
+    let workAreas = "";
+    let recommendedRole = "";
+    let learningInterest = "";
+
     try {
-      const parsed = JSON.parse(app.tools || "[]");
-      toolsText = Array.isArray(parsed) ? parsed.join(", ") : String(parsed);
+      const parsed = JSON.parse(app.tools || "{}");
+      if (typeof parsed === "object" && !Array.isArray(parsed)) {
+        toolsText = Array.isArray(parsed.skills) ? parsed.skills.join(", ") : "";
+        secondaryCategory = parsed.secondaryCategory || "";
+        workAreas = Array.isArray(parsed.workAreas) ? parsed.workAreas.join(", ") : "";
+        recommendedRole = parsed.recommendedRole || "";
+        learningInterest = parsed.learningInterest || "";
+      } else if (Array.isArray(parsed)) {
+        toolsText = parsed.join(", ");
+      } else {
+        toolsText = String(parsed);
+      }
     } catch {
       toolsText = app.tools || "";
     }
@@ -71,11 +90,15 @@ export async function generateCsvString(): Promise<string> {
       escapeCsvField(app.whatsapp),
       escapeCsvField(app.email),
       escapeCsvField(app.track),
+      escapeCsvField(secondaryCategory || "N/A"),
+      escapeCsvField(workAreas || app.focus),
       escapeCsvField(toolsText),
-      escapeCsvField(app.focus),
       escapeCsvField(app.portfolioLink || "N/A"),
+      escapeCsvField("N/A"),
+      escapeCsvField(app.workstation || "8–12 hours"),
       escapeCsvField(app.goal),
-      escapeCsvField(app.workstation),
+      escapeCsvField(learningInterest || "N/A"),
+      escapeCsvField(recommendedRole || "VVLF Student Builder"),
       escapeCsvField(app.consent ? "Yes" : "No"),
     ];
 

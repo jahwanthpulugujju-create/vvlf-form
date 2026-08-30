@@ -1,29 +1,41 @@
 import { describe, expect, it } from "vitest";
-import { applicationInputSchema, isSafeRedirectUrl } from "./application";
+import { applicationInputSchema, enrichApplicationData, isSafeRedirectUrl } from "./application";
 
 const validApplication = {
   fullName: "Sample Applicant",
   college: "Vishnu Institute of Technology",
   department: "CSE",
   studyYear: "2nd Year" as const,
-  whatsapp: "+91 9876543210",
+  whatsapp: "9876543210",
   email: "sample@example.com",
-  track: "Tech & Web" as const,
-  tools: ["Web Basics (HTML/CSS/JS)"],
-  focus: "Debug line-by-line",
-  portfolioLink: "",
-  goal: "Build real projects to boost my resume" as const,
-  workstation: "I have my own personal laptop" as const,
+  category: "Technology & Product",
+  workAreas: ["Web Development", "AI"],
+  skills: ["React", "Python"],
+  proofOfWorkLink: "https://github.com/sample/repo",
+  availabilityHours: "8–12 hours",
+  availabilityDuration: "6 months",
+  startTimeline: "Immediately",
+  goals: ["Build real projects"],
+  contribution: "I want to build full-stack web tools.",
   consent: true as const,
 };
 
 describe("VVLF application validation", () => {
   it("accepts a complete public application", () => {
-    expect(applicationInputSchema.safeParse(validApplication).success).toBe(true);
+    const parsed = applicationInputSchema.safeParse(validApplication);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      const enriched = enrichApplicationData(parsed.data);
+      expect(enriched.recommendedRole).toBe("AI & Automation Engineering Intern");
+    }
   });
 
-  it("rejects a submission without consent or a selected capability", () => {
-    const result = applicationInputSchema.safeParse({ ...validApplication, consent: false, tools: [] });
+  it("rejects a submission without consent or empty skills", () => {
+    const result = applicationInputSchema.safeParse({
+      ...validApplication,
+      consent: false,
+      skills: [],
+    });
     expect(result.success).toBe(false);
   });
 

@@ -9,12 +9,26 @@ export interface ApplicationPayload {
   studyYear: string;
   whatsapp: string;
   email: string;
-  track: string;
-  tools: string[];
-  focus: string;
+  category?: string;
+  track?: string;
+  secondaryCategory?: string;
+  workAreas?: string[];
+  skills?: string[];
+  tools?: string[];
+  focus?: string;
+  proofOfWorkLink?: string | null;
+  proofOfWorkLink2?: string | null;
   portfolioLink?: string | null;
-  goal: string;
-  workstation: string;
+  noWorkToShare?: boolean;
+  learningInterest?: string;
+  availabilityHours?: string;
+  availabilityDuration?: string;
+  startTimeline?: string;
+  goals?: string[];
+  goal?: string;
+  contribution?: string;
+  workstation?: string;
+  recommendedRole?: string;
   consent: boolean;
   submittedAt?: string;
 }
@@ -32,13 +46,34 @@ export async function syncToGoogleSheets(data: ApplicationPayload): Promise<{ su
   }
 
   try {
+    const toolsArray = data.skills || data.tools || [];
+    const workAreasArray = data.workAreas || [];
+    const goalsArray = data.goals || (data.goal ? [data.goal] : []);
+
     const payload = {
       ...data,
+      category: data.category || data.track || "",
+      track: data.category || data.track || "",
+      secondaryCategory: data.secondaryCategory || "",
+      workAreas: workAreasArray,
+      workAreasFormatted: workAreasArray.join(", "),
+      skills: toolsArray,
+      tools: toolsArray,
+      toolsFormatted: toolsArray.join(", "),
+      proofOfWorkLink: data.proofOfWorkLink || data.portfolioLink || "",
+      proofOfWorkLink2: data.proofOfWorkLink2 || "",
+      portfolioLink: data.proofOfWorkLink || data.portfolioLink || "",
+      availabilityHours: data.availabilityHours || "8–12 hours",
+      availabilityDuration: data.availabilityDuration || "6 months",
+      startTimeline: data.startTimeline || "Immediately",
+      goalsFormatted: goalsArray.join(", "),
+      goal: goalsArray.join(", "),
+      contribution: data.contribution || "",
+      recommendedRole: data.recommendedRole || "VVLF Student Builder",
       submittedAt: data.submittedAt || new Date().toISOString(),
-      toolsFormatted: Array.isArray(data.tools) ? data.tools.join(", ") : data.tools,
     };
 
-    console.log(`[Google Sheets] Sending submission for "${data.fullName}" to Google Sheet...`);
+    console.log(`[Google Sheets] Sending submission for "${data.fullName}" (${payload.recommendedRole}) to Google Sheet...`);
 
     const response = await fetch(webhookUrl, {
       method: "POST",
@@ -63,7 +98,7 @@ export async function syncToGoogleSheets(data: ApplicationPayload): Promise<{ su
 }
 
 /**
- * Sync directly to OneDrive / Microsoft Excel Online via Webhook (Power Automate / Make / Zapier)
+ * Sync directly to OneDrive / Microsoft Excel Online via Webhook
  */
 export async function syncToExcelOnline(data: ApplicationPayload): Promise<{ success: boolean; error?: string }> {
   const excelWebhookUrl = process.env.EXCEL_WEBHOOK_URL || process.env.MICROSOFT_POWER_AUTOMATE_URL;
@@ -72,6 +107,10 @@ export async function syncToExcelOnline(data: ApplicationPayload): Promise<{ suc
   }
 
   try {
+    const toolsArray = data.skills || data.tools || [];
+    const workAreasArray = data.workAreas || [];
+    const goalsArray = data.goals || (data.goal ? [data.goal] : []);
+
     const payload = {
       submittedAt: data.submittedAt || new Date().toISOString(),
       fullName: data.fullName,
@@ -80,12 +119,18 @@ export async function syncToExcelOnline(data: ApplicationPayload): Promise<{ suc
       studyYear: data.studyYear,
       whatsapp: data.whatsapp,
       email: data.email,
-      track: data.track,
-      tools: Array.isArray(data.tools) ? data.tools.join(", ") : data.tools,
-      focus: data.focus,
-      portfolioLink: data.portfolioLink || "N/A",
-      goal: data.goal,
-      workstation: data.workstation,
+      category: data.category || data.track || "",
+      secondaryCategory: data.secondaryCategory || "N/A",
+      workAreas: workAreasArray.join(", "),
+      skills: toolsArray.join(", "),
+      proofOfWorkLink: data.proofOfWorkLink || data.portfolioLink || "N/A",
+      proofOfWorkLink2: data.proofOfWorkLink2 || "N/A",
+      availabilityHours: data.availabilityHours || "8–12 hours",
+      availabilityDuration: data.availabilityDuration || "6 months",
+      startTimeline: data.startTimeline || "Immediately",
+      goals: goalsArray.join(", "),
+      contribution: data.contribution || "N/A",
+      recommendedRole: data.recommendedRole || "N/A",
       consent: data.consent ? "Yes" : "No",
     };
 

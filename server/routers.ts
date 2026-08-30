@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { applicationInputSchema } from "./application";
+import { applicationInputSchema, enrichApplicationData } from "./application";
 import { createApplication, createOwnedStudioForm, createStudioResponse, getOwnedStudioForm, getPublishedStudioForm, listApplications, listOwnedStudioForms, listOwnedStudioResponses, setStudioFormStatus, updateOwnedStudioForm } from "./db";
 import { studioFormInputSchema, validateStudioResponse } from "./formStudio";
 import { syncAllSheets } from "./googleSheets";
@@ -36,38 +36,61 @@ export const appRouter = router({
   application: router({
     submit: publicProcedure.input(applicationInputSchema).mutation(async ({ input }) => {
       try {
+        const enriched = enrichApplicationData(input);
+
         await createApplication({
-          fullName: input.fullName,
-          college: input.college,
-          department: input.department,
-          studyYear: input.studyYear,
-          whatsapp: input.whatsapp,
-          email: input.email,
-          track: input.track,
-          tools: JSON.stringify(input.tools),
-          focus: input.focus,
-          portfolioLink: input.portfolioLink || null,
-          goal: input.goal,
-          workstation: input.workstation,
-          consent: input.consent,
+          fullName: enriched.fullName,
+          college: enriched.college,
+          department: enriched.department,
+          studyYear: enriched.studyYear,
+          whatsapp: enriched.whatsapp,
+          email: enriched.email,
+          track: enriched.category,
+          tools: JSON.stringify({
+            category: enriched.category,
+            secondaryCategory: enriched.secondaryCategory,
+            workAreas: enriched.workAreas,
+            skills: enriched.skills,
+            recommendedRole: enriched.recommendedRole,
+            learningInterest: enriched.learningInterest,
+          }),
+          focus: enriched.focus,
+          portfolioLink: enriched.portfolioLink,
+          goal: enriched.goal,
+          workstation: enriched.workstation,
+          consent: enriched.consent,
         });
 
         // Trigger real-time sync to Google Sheets and Excel Online (awaited for serverless resilience)
         try {
           await syncAllSheets({
-            fullName: input.fullName,
-            college: input.college,
-            department: input.department,
-            studyYear: input.studyYear,
-            whatsapp: input.whatsapp,
-            email: input.email,
-            track: input.track,
-            tools: input.tools,
-            focus: input.focus,
-            portfolioLink: input.portfolioLink,
-            goal: input.goal,
-            workstation: input.workstation,
-            consent: input.consent,
+            fullName: enriched.fullName,
+            college: enriched.college,
+            department: enriched.department,
+            studyYear: enriched.studyYear,
+            whatsapp: enriched.whatsapp,
+            email: enriched.email,
+            category: enriched.category,
+            secondaryCategory: enriched.secondaryCategory,
+            track: enriched.category,
+            workAreas: enriched.workAreas,
+            skills: enriched.skills,
+            tools: enriched.skills,
+            focus: enriched.focus,
+            proofOfWorkLink: enriched.proofOfWorkLink,
+            proofOfWorkLink2: enriched.proofOfWorkLink2,
+            portfolioLink: enriched.portfolioLink,
+            noWorkToShare: enriched.noWorkToShare,
+            learningInterest: enriched.learningInterest,
+            availabilityHours: enriched.availabilityHours,
+            availabilityDuration: enriched.availabilityDuration,
+            startTimeline: enriched.startTimeline,
+            goals: enriched.goals,
+            goal: enriched.goal,
+            contribution: enriched.contribution,
+            workstation: enriched.workstation,
+            recommendedRole: enriched.recommendedRole,
+            consent: enriched.consent,
           });
         } catch (sheetsErr) {
           console.error("[Sheets Sync] Error:", sheetsErr);
@@ -76,7 +99,10 @@ export const appRouter = router({
         // Update local spreadsheet file
         updateLocalCsvFile().catch(() => {});
 
-        return { success: true } as const;
+        return {
+          success: true,
+          recommendedRole: enriched.recommendedRole,
+        } as const;
       } catch (error) {
         console.error("[Application] Submission failed", error);
         throw new TRPCError({
