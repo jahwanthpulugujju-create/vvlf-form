@@ -1681,9 +1681,25 @@ function getTrendData(apps, days = 14) {
   }
   return points;
 }
+var ALL_TRACKS = [
+  "Technology & Product",
+  "Startups & Business",
+  "Creative & Media",
+  "Content & Community",
+  "Explore & Build"
+];
+var ALL_YEARS = [
+  "1st Year",
+  "2nd Year",
+  "3rd Year",
+  "4th Year"
+];
 function getTrackDistribution(apps) {
   const total = apps.length || 1;
   const map = /* @__PURE__ */ new Map();
+  for (const track of ALL_TRACKS) {
+    map.set(track, []);
+  }
   for (const a of apps) {
     const list = map.get(a.track) ?? [];
     list.push(a);
@@ -1692,13 +1708,13 @@ function getTrackDistribution(apps) {
   const result = [];
   for (const [track, list] of map) {
     const strong = list.filter((a) => a.score >= 80).length;
-    const avg = Math.round(list.reduce((s, a) => s + a.score, 0) / list.length);
+    const avg = list.length > 0 ? Math.round(list.reduce((s, a) => s + a.score, 0) / list.length) : 0;
     result.push({
       track,
       count: list.length,
       pct: Math.round(list.length / total * 100),
       strongCount: strong,
-      strongRate: Math.round(strong / list.length * 100),
+      strongRate: list.length > 0 ? Math.round(strong / list.length * 100) : 0,
       avgScore: avg
     });
   }
@@ -1754,6 +1770,9 @@ function getSkillFrequency(apps) {
 function getYearDistribution(apps) {
   const total = apps.length || 1;
   const map = /* @__PURE__ */ new Map();
+  for (const yr of ALL_YEARS) {
+    map.set(yr, 0);
+  }
   for (const a of apps) {
     const y = a.studyYear || "Unknown";
     map.set(y, (map.get(y) ?? 0) + 1);

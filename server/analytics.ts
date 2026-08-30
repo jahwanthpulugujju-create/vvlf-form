@@ -171,18 +171,28 @@ export function getTrendData(apps: ApplicationRow[], days = 14): TrendPoint[] {
 // Track Distribution
 // ---------------------------------------------------------------------------
 
-export interface TrackStat {
-  track: string;
-  count: number;
-  pct: number;
-  strongCount: number;
-  strongRate: number;
-  avgScore: number;
-}
+export const ALL_TRACKS = [
+  "Technology & Product",
+  "Startups & Business",
+  "Creative & Media",
+  "Content & Community",
+  "Explore & Build",
+] as const;
+
+export const ALL_YEARS = [
+  "1st Year",
+  "2nd Year",
+  "3rd Year",
+  "4th Year",
+] as const;
 
 export function getTrackDistribution(apps: EnrichedApplication[]): TrackStat[] {
   const total = apps.length || 1;
   const map = new Map<string, EnrichedApplication[]>();
+  // Pre-seed all 5 tracks
+  for (const track of ALL_TRACKS) {
+    map.set(track, []);
+  }
   for (const a of apps) {
     const list = map.get(a.track) ?? [];
     list.push(a);
@@ -191,13 +201,13 @@ export function getTrackDistribution(apps: EnrichedApplication[]): TrackStat[] {
   const result: TrackStat[] = [];
   for (const [track, list] of map) {
     const strong = list.filter((a) => a.score >= 80).length;
-    const avg = Math.round(list.reduce((s, a) => s + a.score, 0) / list.length);
+    const avg = list.length > 0 ? Math.round(list.reduce((s, a) => s + a.score, 0) / list.length) : 0;
     result.push({
       track,
       count: list.length,
       pct: Math.round((list.length / total) * 100),
       strongCount: strong,
-      strongRate: Math.round((strong / list.length) * 100),
+      strongRate: list.length > 0 ? Math.round((strong / list.length) * 100) : 0,
       avgScore: avg,
     });
   }
@@ -290,6 +300,10 @@ export interface SimpleStat {
 export function getYearDistribution(apps: ApplicationRow[]): SimpleStat[] {
   const total = apps.length || 1;
   const map = new Map<string, number>();
+  // Pre-seed all 4 study years
+  for (const yr of ALL_YEARS) {
+    map.set(yr, 0);
+  }
   for (const a of apps) {
     const y = a.studyYear || "Unknown";
     map.set(y, (map.get(y) ?? 0) + 1);

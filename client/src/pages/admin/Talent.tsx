@@ -11,6 +11,21 @@ const TIER_LABELS: Record<string, string> = {
   low: "⚪ Low",
 };
 
+const ALL_TRACKS = [
+  "Technology & Product",
+  "Startups & Business",
+  "Creative & Media",
+  "Content & Community",
+  "Explore & Build",
+] as const;
+
+const ALL_YEARS = [
+  "1st Year",
+  "2nd Year",
+  "3rd Year",
+  "4th Year",
+] as const;
+
 export default function Talent() {
   const appsQuery = trpc.admin.listApplications.useQuery(undefined, { refetchInterval: 30_000 });
   const updateCandidate = trpc.admin.updateCandidate.useMutation({ onSuccess: () => appsQuery.refetch() });
@@ -23,8 +38,15 @@ export default function Talent() {
 
   const apps = appsQuery.data ?? [];
 
-  const tracks = useMemo(() => Array.from(new Set(apps.map((a) => a.track))).sort(), [apps]);
-  const years = useMemo(() => Array.from(new Set(apps.map((a) => a.studyYear))).sort(), [apps]);
+  const tracks = useMemo(() => {
+    const list = Array.from(new Set([...ALL_TRACKS, ...apps.map((a) => a.track).filter(Boolean)]));
+    return list;
+  }, [apps]);
+
+  const years = useMemo(() => {
+    const list = Array.from(new Set([...ALL_YEARS, ...apps.map((a) => a.studyYear).filter(Boolean)]));
+    return list;
+  }, [apps]);
 
   const ranked = useMemo(() => {
     return [...apps]
