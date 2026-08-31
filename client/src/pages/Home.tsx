@@ -15,6 +15,7 @@ import {
   Lightbulb,
   Link as LinkIcon,
   LockKeyhole,
+  MessageCircle,
   Rocket,
   Search,
   Share2,
@@ -40,6 +41,8 @@ const HERO_IMAGE = "/manus-storage/vvlf-student-workspace_dc51b65e.png";
 const ABSTRACT_FIELD = "/manus-storage/vvlf-abstract-signal-field_86c3cd10.jpg";
 const CAPTION_LOGO = "/manus-storage/vvlf-symbol-logo_015c9f01.png";
 const VVLF_WEBSITE_URL = "https://vishnuventurelabs.com/";
+const VVLF_WHATSAPP_GROUP_URL =
+  "https://chat.whatsapp.com/J6xbYqXJ9UK3Z3iuYYD3U2?s=sh&p=a&mlu=4";
 
 // Category Definitions
 export const CATEGORIES = [
@@ -501,7 +504,7 @@ export default function Home() {
         availabilityDuration: form.availabilityDuration,
         startTimeline: form.startTimeline,
         goals: form.goals,
-        contribution: form.contribution.trim() || undefined,
+        contribution: form.contribution.trim(),
         consent: true,
         source: sessionStorage.getItem("vvlf_source") || undefined,
       });
@@ -525,6 +528,12 @@ export default function Home() {
     navigator.clipboard.writeText(url);
     toast.success("Application link copied to clipboard!");
     trackFunnelEvent("copy_link_clicked");
+  };
+
+  const handleCopyWhatsAppGroupLink = () => {
+    navigator.clipboard.writeText(VVLF_WHATSAPP_GROUP_URL);
+    toast.success("WhatsApp group link copied to clipboard!");
+    trackFunnelEvent("copy_whatsapp_group_link_clicked");
   };
 
   const handleShareWhatsApp = () => {
@@ -563,7 +572,70 @@ export default function Home() {
               Thank you for applying for <strong>{form.category}</strong>. Our team is screening applications and looking for high-curiosity builders.
             </p>
 
-            <div className="no-startup-idea-hero-banner" style={{ textAlign: "left", maxWidth: 520, margin: "0 auto 24px" }}>
+            {/* MANDATORY NEXT STEP: WhatsApp Community Group */}
+            <div className="whatsapp-next-step-card">
+              <div className="whatsapp-next-step-badge">
+                <span className="live-pulse-dot" /> Official WhatsApp Group
+              </div>
+
+              <div className="whatsapp-next-step-content">
+                <div className="whatsapp-icon-circle" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                  </svg>
+                </div>
+                <div className="whatsapp-next-step-text">
+                  <h3 style={{ color: "#166534", fontSize: "17px", fontWeight: 800, marginBottom: "6px" }}>
+                    Join the Official Applicant WhatsApp Group
+                  </h3>
+                  <p style={{ fontSize: "14px", color: "#1f2937", lineHeight: "1.6", marginBottom: "10px" }}>
+                    <strong>Note:</strong> Upon submitting the form, make sure to join the official Applicant WhatsApp Group for screening announcements and next steps!
+                  </p>
+                  <a
+                    href={VVLF_WHATSAPP_GROUP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="whatsapp-raw-link-pill"
+                    title="Click to join WhatsApp group"
+                  >
+                    <span className="pill-tag">Link</span>
+                    <span className="pill-url">{VVLF_WHATSAPP_GROUP_URL}</span>
+                    <ExternalLink size={13} />
+                  </a>
+                </div>
+              </div>
+
+              <div className="whatsapp-next-step-actions">
+                <a
+                  className="whatsapp-join-group-cta"
+                  href={VVLF_WHATSAPP_GROUP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackFunnelEvent("join_whatsapp_group_clicked")}
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                  </svg>
+                  <span>Join WhatsApp Group</span>
+                  <ExternalLink size={15} />
+                </a>
+
+                <button
+                  className="whatsapp-copy-group-btn"
+                  type="button"
+                  onClick={handleCopyWhatsAppGroupLink}
+                >
+                  <Copy size={15} /> Copy Group Link
+                </button>
+              </div>
+
+              <div className="whatsapp-next-step-hint">
+                <span className="hint-pill">Next Steps</span>
+                <span>Important: All cohort screening updates, assignments &amp; schedules are shared in this group.</span>
+              </div>
+            </div>
+
+            <div className="no-startup-idea-hero-banner" style={{ textAlign: "left", maxWidth: 520, margin: "20px auto 24px" }}>
               <div className="no-idea-text">
                 <strong>NO STARTUP IDEA REQUIRED</strong>
                 <p>You'll be working on real venture projects, products, and media with the VVLF team.</p>
@@ -1278,6 +1350,16 @@ export default function Home() {
                     {fieldErrors.consent}
                   </span>
                 )}
+
+                {/* Pre-submit WhatsApp Group Notice */}
+                <div className="pre-submit-whatsapp-notice">
+                  <div className="notice-icon-circle">
+                    <MessageCircle size={15} />
+                  </div>
+                  <div>
+                    <strong>Next step after submit:</strong> You will receive the link to join our official WhatsApp group for all further updates, task briefs, and screening schedules.
+                  </div>
+                </div>
               </section>
             )}
 

@@ -11,6 +11,8 @@ export type FunnelEvent =
   | "application_submitted"
   | "share_whatsapp_clicked"
   | "copy_link_clicked"
+  | "join_whatsapp_group_clicked"
+  | "copy_whatsapp_group_link_clicked"
   | "about_modal_opened";
 
 export interface UmamiTracker {

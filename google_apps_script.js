@@ -134,10 +134,38 @@ function doPost(e) {
     rowRange.setFontSize(9);
     rowRange.setVerticalAlignment("middle");
     
-    // Auto-fit column widths if below 15 rows
-    if (lastRow <= 15) {
-      for (let c = 1; c <= HEADERS.length; c++) {
-        sheet.autoResizeColumn(c);
+    // Optional: Send automatic email with WhatsApp Group Link
+    if (data.email) {
+      try {
+        const firstName = (data.fullName || "").split(" ")[0] || "Builder";
+        MailApp.sendEmail({
+          to: data.email,
+          subject: "Welcome to VVLF Builder Funnel - Next Steps & WhatsApp Group",
+          htmlBody: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e293b; line-height: 1.6;">
+              <h2 style="color: #1d4ed8; margin-bottom: 12px;">Hi ${firstName},</h2>
+              <p>Thank you for submitting your application to the <strong>VVLF Student Builder Program</strong>.</p>
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 18px; border-radius: 12px; margin: 20px 0;">
+                <h3 style="color: #166534; margin: 0 0 8px;">Important Next Step: Join Applicant WhatsApp Group</h3>
+                <p style="margin: 0 0 14px; font-size: 14px; color: #334155;">
+                  All screening announcements, task briefs, interview schedules, and onboarding updates will be shared exclusively in our applicant community group.
+                </p>
+                <a href="https://chat.whatsapp.com/J6xbYqXJ9UK3Z3iuYYD3U2?s=sh&p=a&mlu=4" style="display: inline-block; background: #22c55e; color: #ffffff; padding: 10px 20px; border-radius: 8px; font-weight: bold; text-decoration: none;">
+                  Join WhatsApp Group
+                </a>
+              </div>
+              <p style="font-size: 13px; color: #64748b;">
+                Direct group link: <a href="https://chat.whatsapp.com/J6xbYqXJ9UK3Z3iuYYD3U2?s=sh&p=a&mlu=4">https://chat.whatsapp.com/J6xbYqXJ9UK3Z3iuYYD3U2?s=sh&p=a&mlu=4</a>
+              </p>
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+              <p style="font-size: 12px; color: #94a3b8;">
+                Vishnu Venture Labs Foundation (VVLF) • BVRIT Narsapur Incubation Center
+              </p>
+            </div>
+          `
+        });
+      } catch (emailErr) {
+        Logger.log("Email notification error: " + emailErr);
       }
     }
 
