@@ -1,17 +1,17 @@
 /**
  * ============================================================================
- * VVLF Student Builder Program - Google Apps Script Backend (v2.0)
+ * VVLF Application - Google Apps Script Backend (v2.0)
  * ============================================================================
  * 
  * INSTRUCTIONS:
  * 1. Open Google Sheets (https://sheets.google.com) and create/open your Spreadsheet.
- *    Name it: "VVLF Student Builder Program Applications"
+ *    Name it: "VVLF Applications"
  * 2. Click "Extensions" in the top menu -> select "Apps Script".
  * 3. Paste ALL the code below into Code.gs.
  * 4. Click "Deploy" (top right button) -> "New deployment" (or "Manage deployments" -> Edit -> New version).
  * 5. Under "Select type" (gear icon) -> select "Web app".
  * 6. Set:
- *    - Description: "VVLF Student Builder Form Webhook v2"
+ *    - Description: "VVLF Form Webhook v2"
  *    - Execute as: "Me (<your-email>)"
  *    - Who has access: "Anyone"
  * 7. Click "Deploy", authorize permissions when prompted, and copy the "Web app URL".
@@ -144,7 +144,7 @@ function doPost(e) {
           htmlBody: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e293b; line-height: 1.6;">
               <h2 style="color: #1d4ed8; margin-bottom: 12px;">Hi ${firstName},</h2>
-              <p>Thank you for submitting your application to the <strong>VVLF Student Builder Program</strong>.</p>
+              <p>Thank you for submitting your application to <strong>VVLF</strong>.</p>
               <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 18px; border-radius: 12px; margin: 20px 0;">
                 <h3 style="color: #166534; margin: 0 0 8px;">Important Next Step: Join Applicant WhatsApp Group</h3>
                 <p style="margin: 0 0 14px; font-size: 14px; color: #334155;">
@@ -184,6 +184,6 @@ function doPost(e) {
 
 function doGet(e) {
   return ContentService
-    .createTextOutput(JSON.stringify({ status: "active", message: "VVLF Student Builder Program Google Sheets Webhook is active!" }))
+    .createTextOutput(JSON.stringify({ status: "active", message: "VVLF Google Sheets Webhook is active!" }))
     .setMimeType(ContentService.MimeType.JSON);
 }

@@ -538,7 +538,7 @@ export default function Home() {
 
   const handleShareWhatsApp = () => {
     const text = encodeURIComponent(
-      `Hey! VVLF (Vishnu Venture Labs Foundation) has opened applications for their Student Builder Program. You can work across Tech, AI, Design, Media, Startups & Growth (No startup idea required!). Apply here in 1 min: ${window.location.origin}`
+      `Hey! VVLF (Vishnu Venture Labs Foundation) has opened applications. You can work across Tech, AI, Design, Media, Startups & Growth (No startup idea required!). Apply here in 1 min: ${window.location.origin}`
     );
     window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
     trackFunnelEvent("share_whatsapp_clicked");
@@ -682,7 +682,6 @@ export default function Home() {
             <img src={VVLF_LOGO} alt="Vishnu Venture Labs Foundation" />
           </div>
 
-          <p className="rail-kicker">VVLF Student Builder Program</p>
           <h1>Find your place at VVLF.</h1>
           <p className="rail-intro">
             Build with a real venture ecosystem. Work on real projects across startups, technology, AI, media, design, growth and partnerships.
@@ -757,7 +756,6 @@ export default function Home() {
           <header className="canvas-header">
             <div className="canvas-header-top">
               <div className="canvas-header-title-block">
-                <span className="canvas-overline">VVLF STUDENT BUILDER PROGRAM</span>
                 <div className="canvas-progress-badge">
                   {step === 0 && "1 of 3 — Pick your track"}
                   {step === 1 && "2 of 3 — Quick 20s details"}
@@ -1339,7 +1337,7 @@ export default function Home() {
                   <span>
                     <strong>Privacy notice and consent *</strong>
                     <br />
-                    I confirm that my details are accurate. I agree that VVLF may securely use my contact details solely to review my application and communicate regarding the Student Builder Program.
+                    I confirm that my details are accurate. I agree that VVLF may securely use my contact details solely to review my application and communicate regarding program updates.
                   </span>
                 </label>
                 {fieldErrors.consent && (

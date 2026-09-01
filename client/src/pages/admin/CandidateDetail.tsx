@@ -164,7 +164,7 @@ export default function CandidateDetail({ app, onClose, onUpdate }: CandidateDet
                   <MessageCircle size={14} /> Chat: +91 {app.whatsapp}
                 </a>
                 <a
-                  href={`https://wa.me/91${app.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${app.fullName.split(" ")[0]}! Thanks for applying to the VVLF Student Builder Program. Please follow this link to join our official WhatsApp group for further updates regarding the next steps: https://chat.whatsapp.com/J6xbYqXJ9UK3Z3iuYYD3U2?s=sh&p=a&mlu=4`)}`}
+                  href={`https://wa.me/91${app.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${app.fullName.split(" ")[0]}! Thanks for applying to VVLF. Please follow this link to join our official WhatsApp group for further updates regarding the next steps: https://chat.whatsapp.com/J6xbYqXJ9UK3Z3iuYYD3U2?s=sh&p=a&mlu=4`)}`}
                   target="_blank"
                   rel="noreferrer"
                   style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#166534", background: "#dcfce7", border: "1px solid #86efac", padding: "6px 10px", borderRadius: 8, textDecoration: "none", fontWeight: 700 }}
