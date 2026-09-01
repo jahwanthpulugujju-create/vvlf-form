@@ -575,7 +575,7 @@ export default function Home() {
             {/* MANDATORY NEXT STEP: WhatsApp Community Group */}
             <div className="whatsapp-next-step-card">
               <div className="whatsapp-next-step-badge">
-                <span className="live-pulse-dot" /> Official WhatsApp Group
+                Official WhatsApp Group
               </div>
 
               <div className="whatsapp-next-step-content">
@@ -682,9 +682,7 @@ export default function Home() {
             <img src={VVLF_LOGO} alt="Vishnu Venture Labs Foundation" />
           </div>
 
-          <p className="rail-kicker">
-            <span className="rail-kicker-dot" /> VVLF Student Builder Program
-          </p>
+          <p className="rail-kicker">VVLF Student Builder Program</p>
           <h1>Find your place at VVLF.</h1>
           <p className="rail-intro">
             Build with a real venture ecosystem. Work on real projects across startups, technology, AI, media, design, growth and partnerships.
@@ -859,7 +857,6 @@ export default function Home() {
                         </div>
                         <h3>{cat.title}</h3>
                         <span className="category-tags">{cat.tagline}</span>
-                        <p>{cat.description}</p>
                       </button>
                     );
                   })}
